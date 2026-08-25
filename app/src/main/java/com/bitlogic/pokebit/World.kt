@@ -1,0 +1,201 @@
+package com.bitlogic.pokebit.game
+
+import kotlin.math.roundToInt
+import kotlin.random.Random
+
+enum class GameMode { LEVEL, ENDLESS }
+
+enum class GameStatus { RUNNING, DEAD, COMPLETED }
+
+/**
+ * Toda la simulacion del juego. NO usa estado de Compose a proposito:
+ * es una clase de Kotlin normal que se actualiza con paso fijo.
+ * La capa de UI solo la lee y la dibuja.
+ */
+class World(val mode: GameMode, val level: LevelData?) {
+
+    val player = Player()
+    val obstacles = ArrayList<Obstacle>()
+    val gaps = ArrayList<Gap>()
+
+    var scrollX = 0f
+        private set
+
+    var status = GameStatus.RUNNING
+        private set
+
+    var pokeballs = 0
+        private set
+
+    var attempts = 1
+        private set
+
+    var speed = GameConfig.BASE_SCROLL_SPEED
+        private set
+
+    private val endless = EndlessGenerator(Random(System.nanoTime()))
+    private var jumpBuffer = 0f
+
+    val score: Int
+        get() = (scrollX * GameConfig.POINTS_PER_TILE).toInt() +
+                pokeballs * GameConfig.POINTS_PER_POKEBALL
+
+    val progress: Float
+        get() = if (mode == GameMode.LEVEL && level != null) {
+            (scrollX / level.lengthTiles).coerceIn(0f, 1f)
+        } else 0f
+
+    val title: String
+        get() = level?.name ?: "MODO INFINITO"
+
+    init {
+        start(firstRun = true)
+    }
+
+    fun retry() = start(firstRun = false)
+
+    private fun start(firstRun: Boolean) {
+        if (!firstRun) attempts++
+        player.reset()
+        scrollX = 0f
+        pokeballs = 0
+        jumpBuffer = 0f
+        status = GameStatus.RUNNING
+        obstacles.clear()
+        gaps.clear()
+
+        if (mode == GameMode.LEVEL && level != null) {
+            level.obstacles.forEach { obstacles.add(it.freshCopy()) }
+            gaps.addAll(level.gaps)
+            speed = level.scrollSpeed
+        } else {
+            speed = GameConfig.BASE_SCROLL_SPEED
+            endless.reset()
+            endless.generateUpTo(GameConfig.TILES_VISIBLE_X * 3f, obstacles, gaps)
+        }
+    }
+
+    /** Un toque en pantalla. Se guarda en un buffer corto para que un toque
+     *  hecho una milesima antes de aterrizar no se pierda. */
+    fun onTap() {
+        if (status == GameStatus.RUNNING) jumpBuffer = GameConfig.JUMP_BUFFER
+    }
+
+    fun update(dt: Float) {
+        if (status != GameStatus.RUNNING) return
+
+        if (mode == GameMode.ENDLESS) {
+            speed = (speed + GameConfig.ENDLESS_ACCEL * dt)
+                .coerceAtMost(GameConfig.ENDLESS_MAX_SPEED)
+            endless.generateUpTo(scrollX + GameConfig.TILES_VISIBLE_X * 3f, obstacles, gaps)
+            prune()
+        }
+
+        scrollX += speed * dt
+
+        val prevY = player.y
+        val wasAirborne = !player.onGround
+
+        // 1. Salto (usa el onGround del paso anterior)
+        if (jumpBuffer > 0f) {
+            jumpBuffer -= dt
+            if (player.onGround) {
+                player.vy = GameConfig.JUMP_VELOCITY
+                player.onGround = false
+                jumpBuffer = 0f
+            }
+        }
+
+        // 2. Integracion
+        player.vy -= GameConfig.GRAVITY * dt
+        player.y += player.vy * dt
+        if (!player.onGround) player.rotation += GameConfig.ROTATION_SPEED * dt
+
+        // 3. Resolucion de contactos. Se asume "en el aire" y las colisiones lo desmienten.
+        var grounded = false
+
+        val centerX = scrollX + GameConfig.PLAYER_X + GameConfig.PLAYER_SIZE / 2f
+        var overGap = false
+        for (g in gaps) {
+            if (g.right < centerX) continue
+            if (g.x > centerX) break
+            overGap = true
+            break
+        }
+
+        if (!overGap && player.y <= 0f && player.vy <= 0f) {
+            player.y = 0f
+            player.vy = 0f
+            grounded = true
+        }
+
+        var body = AABB(
+            left = scrollX + GameConfig.PLAYER_X,
+            bottom = player.y,
+            width = GameConfig.PLAYER_SIZE,
+            height = GameConfig.PLAYER_SIZE
+        )
+
+        for (ob in obstacles) {
+            if (ob.x > body.right + 2f) break          // lista ordenada por X
+            if (ob.right < body.left - 2f) continue
+
+            when (ob.type) {
+                ObstacleType.POKEBALL -> {
+                    if (!ob.collected && body.overlaps(ob.bounds())) {
+                        ob.collected = true
+                        pokeballs++
+                    }
+                }
+
+                ObstacleType.SPIKE -> {
+                    val lethal = body.shrink(GameConfig.LETHAL_SHRINK)
+                    if (lethal.overlaps(ob.bounds().shrink(GameConfig.SPIKE_SHRINK))) {
+                        status = GameStatus.DEAD
+                        return
+                    }
+                }
+
+                ObstacleType.BLOCK, ObstacleType.PLATFORM -> {
+                    if (body.overlaps(ob.bounds())) {
+                        val cameFromAbove =
+                            player.vy <= 0f && prevY >= ob.y + ob.h - GameConfig.LANDING_TOLERANCE
+                        if (cameFromAbove) {
+                            player.y = ob.y + ob.h
+                            player.vy = 0f
+                            grounded = true
+                            body = body.copy(bottom = player.y)
+                        } else {
+                            // Choque de lado o desde abajo: en Geometry Dash eso mata.
+                            status = GameStatus.DEAD
+                            return
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Caida al vacio
+        if (player.y < GameConfig.DEATH_Y) {
+            status = GameStatus.DEAD
+            return
+        }
+
+        if (grounded && wasAirborne) {
+            player.rotation = (player.rotation / 90f).roundToInt() * 90f
+        }
+        player.onGround = grounded
+
+        // 5. Fin de nivel
+        if (mode == GameMode.LEVEL && level != null && scrollX >= level.lengthTiles) {
+            status = GameStatus.COMPLETED
+        }
+    }
+
+    /** En modo infinito la lista crece sin parar; se tiran los objetos ya pasados. */
+    private fun prune() {
+        val limit = scrollX - 5f
+        while (obstacles.isNotEmpty() && obstacles[0].right < limit) obstacles.removeAt(0)
+        while (gaps.isNotEmpty() && gaps[0].right < limit) gaps.removeAt(0)
+    }
+}
