@@ -24,6 +24,7 @@ import com.bitlogic.pokebit.game.LevelLoader
 import com.bitlogic.pokebit.ui.GameScreen
 import com.bitlogic.pokebit.ui.MenuScreen
 import com.bitlogic.pokebit.ui.Palette
+import com.bitlogic.pokebit.ui.ScreenInventory
 
 class MainActivity : ComponentActivity() {
 
@@ -50,7 +51,10 @@ class MainActivity : ComponentActivity() {
 
 private sealed interface Screen {
     object Menu : Screen
+    object Inventory: Screen
     class Playing(val mode: GameMode) : Screen
+
+
 }
 
 @Composable
@@ -65,8 +69,12 @@ private fun PokeBitApp(store: ProgressStore, level: LevelData, onExit: () -> Uni
                 bestScore = best,
                 onPlay = { screen = Screen.Playing(GameMode.LEVEL) },
                 onEndless = { screen = Screen.Playing(GameMode.ENDLESS) },
-                onInventory = {screen = Screen.Playing(GameMode.INVENTORY)},
+                onInventory = {screen = Screen.Inventory},
                 onExit = onExit
+            )
+
+            is Screen.Inventory -> ScreenInventory (
+                onBack = {screen = Screen.Menu}
             )
 
             is Screen.Playing -> GameScreen(
