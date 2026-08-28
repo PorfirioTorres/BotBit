@@ -33,7 +33,7 @@ class EndlessGenerator(private val rng: Random) {
             // 1 de cada 3 bloques trae un coleccionable en el punto alto del salto.
             if (rng.nextInt(3) == 0) {
                 batch.add(
-                    Obstacle(ObstacleType.POKEBALL, cursor + chunk.width / 2f, 2f, 0.7f, 0.7f)
+                    Obstacle(ObstacleType.COIN, cursor + chunk.width / 2f, 2f, 0.7f, 0.7f)
                 )
             }
             batch.sortBy { it.x }

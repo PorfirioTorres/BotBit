@@ -14,4 +14,16 @@ object Palette {
     val Blue = Color(0xFF2563EB)
     val Muted = Color(0xFF6B7280)
     val Scrim = Color(0xCCF2F3F5)
+
+    val Red = Color(0xFFEF4444)
+    val Green = Color(0xFF10B981)
+    val Purple = Color(0xFF6B21A8)
+    val Orange = Color(0xFFF97316)
+    val LightYellow = Color(0xFFFCD34D)
+    val DarkYellow = Color(0xFFFFCB05)
+    val LightBg = Color(0xFFF9FAFB)
+    val LightGrey = Color(0xFFE5E7EB)
+    val YellowBg = Color(0xFFFFFEE6)
+    val Black = Color(0xFF111827)
+    val White = Color(0xFFFFFFFF)
 }

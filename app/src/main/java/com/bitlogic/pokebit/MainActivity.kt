@@ -65,6 +65,7 @@ private fun PokeBitApp(store: ProgressStore, level: LevelData, onExit: () -> Uni
                 bestScore = best,
                 onPlay = { screen = Screen.Playing(GameMode.LEVEL) },
                 onEndless = { screen = Screen.Playing(GameMode.ENDLESS) },
+                onInventory = {screen = Screen.Playing(GameMode.INVENTORY)},
                 onExit = onExit
             )
 

@@ -3,7 +3,7 @@ package com.bitlogic.pokebit.game
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-enum class GameMode { LEVEL, ENDLESS }
+enum class GameMode { LEVEL, ENDLESS, INVENTORY }
 
 enum class GameStatus { RUNNING, DEAD, COMPLETED }
 
@@ -141,7 +141,7 @@ class World(val mode: GameMode, val level: LevelData?) {
             if (ob.right < body.left - 2f) continue
 
             when (ob.type) {
-                ObstacleType.POKEBALL -> {
+                ObstacleType.COIN -> {
                     if (!ob.collected && body.overlaps(ob.bounds())) {
                         ob.collected = true
                         pokeballs++
@@ -157,6 +157,22 @@ class World(val mode: GameMode, val level: LevelData?) {
                 }
 
                 ObstacleType.BLOCK, ObstacleType.PLATFORM -> {
+                    if (body.overlaps(ob.bounds())) {
+                        val cameFromAbove =
+                            player.vy <= 0f && prevY >= ob.y + ob.h - GameConfig.LANDING_TOLERANCE
+                        if (cameFromAbove) {
+                            player.y = ob.y + ob.h
+                            player.vy = 0f
+                            grounded = true
+                            body = body.copy(bottom = player.y)
+                        } else {
+                            // Choque de lado o desde abajo: en Geometry Dash eso mata.
+                            status = GameStatus.DEAD
+                            return
+                        }
+                    }
+                }
+                ObstacleType.RECTANGLE, ObstacleType.PLATFORM -> {
                     if (body.overlaps(ob.bounds())) {
                         val cameFromAbove =
                             player.vy <= 0f && prevY >= ob.y + ob.h - GameConfig.LANDING_TOLERANCE

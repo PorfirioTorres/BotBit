@@ -148,7 +148,7 @@ fun GameScreen(
                 title = "PAUSA",
                 score = hudScore,
                 bestScore = bestScore,
-                pokeballs = hudBalls,
+                coins = hudBalls,
                 primaryLabel = "CONTINUAR",
                 onPrimary = { paused = false },
                 onMenu = onMenu
@@ -160,7 +160,7 @@ fun GameScreen(
                 title = if (status == GameStatus.COMPLETED) "NIVEL SUPERADO" else "FIN DE JUEGO",
                 score = finalScore,
                 bestScore = maxOf(bestScore, finalScore),
-                pokeballs = world.pokeballs,
+                coins = world.pokeballs,
                 primaryLabel = "REINTENTAR",
                 onPrimary = {
                     world.retry()

@@ -64,6 +64,14 @@ fun DrawScope.drawWorld(world: World) {
                 drawRoundRect(Palette.Ink, topLeft, boxSize, radius, style = Stroke(stroke))
             }
 
+            ObstacleType.RECTANGLE -> {
+                val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
+                val boxSize = Size(ob.w * tile, ob.h * tile)
+                val radius = CornerRadius(tile * 0.12f, tile * 0.12f)
+                drawRoundRect(Palette.Surface, topLeft, boxSize, radius)
+                drawRoundRect(Palette.Ink, topLeft, boxSize, radius, style = Stroke(stroke))
+            }
+
             ObstacleType.PLATFORM -> {
                 val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
                 val boxSize = Size(ob.w * tile, ob.h * tile)
@@ -72,7 +80,7 @@ fun DrawScope.drawWorld(world: World) {
                 drawRect(Palette.Ink, topLeft, boxSize, style = Stroke(stroke * 0.7f))
             }
 
-            ObstacleType.POKEBALL -> {
+            ObstacleType.COIN -> {
                 if (!ob.collected) {
                     val cx = sx(ob.x + ob.w / 2f)
                     val cy = sy(ob.y + ob.h / 2f)

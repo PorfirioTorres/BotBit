@@ -37,11 +37,15 @@ enum class ObstacleType {
     /** Cubo solido. Se puede aterrizar encima; tocarlo de lado = muerte. */
     BLOCK,
 
+    RECTANGLE,
+
     /** Plataforma elevada. Mismas reglas que BLOCK. */
     PLATFORM,
 
     /** Coleccionable. No mata, suma puntos. */
-    POKEBALL
+    COIN
+
+
 }
 
 class Obstacle(
