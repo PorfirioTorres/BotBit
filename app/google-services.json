@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:380477130852:android:b825af08c4238782503771",
+        "mobilesdk_app_id": "1:380477130852:android:b0f29ab7d8e23b31503771",
         "android_client_info": {
-          "package_name": "com.bitlogic.pokebit"
+          "package_name": "com.bitlogic.botbit"
         }
       },
       "oauth_client": [],

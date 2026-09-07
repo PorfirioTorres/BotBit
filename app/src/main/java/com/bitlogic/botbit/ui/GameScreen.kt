@@ -1,4 +1,4 @@
-package com.bitlogic.pokebit.ui
+package com.bitlogic.botbit.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -38,30 +38,33 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
-import com.bitlogic.pokebit.game.GameConfig
-import com.bitlogic.pokebit.game.GameMode
-import com.bitlogic.pokebit.game.GameStatus
-import com.bitlogic.pokebit.game.LevelData
-import com.bitlogic.pokebit.game.World
+import com.bitlogic.botbit.game.GameConfig
+import com.bitlogic.botbit.game.GameMode
+import com.bitlogic.botbit.game.GameStatus
+import com.bitlogic.botbit.game.LevelData
+import com.bitlogic.botbit.game.World
+import com.bitlogic.botbit.game.missions.MissionManager
 
 @Composable
 fun GameScreen(
     mode: GameMode,
     level: LevelData?,
     bestScore: Int,
-    onRunFinished: (score: Int, pokeballs: Int, completed: Boolean) -> Unit,
+    selectedCharacter: String = "classic",
+    missionManager: MissionManager? = null,
+    onRunFinished: (score: Int, coins: Int, completed: Boolean) -> Unit,
     onMenu: () -> Unit
 ) {
-    val world = remember(mode, level) { World(mode, level) }
+    val world = remember(mode, level, missionManager, selectedCharacter) { 
+        World(mode, level, missionManager, selectedCharacter) 
+    }
 
-    // Este contador SOLO se lee dentro del lambda de dibujo del Canvas.
-    // Asi Compose repinta sin recomponer: es la clave de los 60 fps.
     val frame = remember { mutableStateOf(0) }
 
     var status by remember { mutableStateOf(GameStatus.RUNNING) }
     var paused by remember { mutableStateOf(false) }
     var hudScore by remember { mutableStateOf(0) }
-    var hudBalls by remember { mutableStateOf(0) }
+    var hudCoins by remember { mutableStateOf(0) }
     var hudProgress by remember { mutableStateOf(0f) }
     var finalScore by remember { mutableStateOf(0) }
 
@@ -77,14 +80,13 @@ fun GameScreen(
                         .coerceAtMost(GameConfig.MAX_FRAME_DELTA)
                     accumulator += delta
 
-                    // Paso fijo: la fisica avanza siempre en trozos identicos.
                     var guard = 0
                     while (accumulator >= GameConfig.FIXED_STEP && guard < 12) {
                         world.update(GameConfig.FIXED_STEP)
                         accumulator -= GameConfig.FIXED_STEP
                         guard++
                     }
-                    if (guard >= 12) accumulator = 0f   // el celular no da mas, no acumules deuda
+                    if (guard >= 12) accumulator = 0f
                 }
                 last = now
                 frame.value++
@@ -93,11 +95,10 @@ fun GameScreen(
                     finalScore = world.score
                     status = world.status
                 }
-                // El HUD no necesita 60 fps. A 15 se ve igual y recompone 4 veces menos.
                 if (++hudTick >= 4) {
                     hudTick = 0
                     hudScore = world.score
-                    hudBalls = world.pokeballs
+                    hudCoins = world.coins
                     hudProgress = world.progress
                 }
             }
@@ -106,7 +107,7 @@ fun GameScreen(
 
     LaunchedEffect(status) {
         if (status != GameStatus.RUNNING) {
-            onRunFinished(finalScore, world.pokeballs, status == GameStatus.COMPLETED)
+            onRunFinished(finalScore, world.coins, status == GameStatus.COMPLETED)
         }
     }
 
@@ -119,7 +120,7 @@ fun GameScreen(
                 progress = hudProgress,
                 showProgress = mode == GameMode.LEVEL,
                 score = hudScore,
-                pokeballs = hudBalls,
+                coins = hudCoins,
                 paused = paused,
                 onTogglePause = { paused = !paused }
             )
@@ -133,7 +134,7 @@ fun GameScreen(
                     }
             ) {
                 Canvas(Modifier.fillMaxSize()) {
-                    frame.value           // suscripcion que dispara el repintado
+                    frame.value
                     drawWorld(world)
                 }
 
@@ -148,7 +149,7 @@ fun GameScreen(
                 title = "PAUSA",
                 score = hudScore,
                 bestScore = bestScore,
-                coins = hudBalls,
+                coins = hudCoins,
                 primaryLabel = "CONTINUAR",
                 onPrimary = { paused = false },
                 onMenu = onMenu
@@ -160,7 +161,7 @@ fun GameScreen(
                 title = if (status == GameStatus.COMPLETED) "NIVEL SUPERADO" else "FIN DE JUEGO",
                 score = finalScore,
                 bestScore = maxOf(bestScore, finalScore),
-                coins = world.pokeballs,
+                coins = world.coins,
                 primaryLabel = "REINTENTAR",
                 onPrimary = {
                     world.retry()
@@ -179,7 +180,7 @@ private fun Hud(
     progress: Float,
     showProgress: Boolean,
     score: Int,
-    pokeballs: Int,
+    coins: Int,
     paused: Boolean,
     onTogglePause: () -> Unit
 ) {
@@ -242,7 +243,7 @@ private fun Hud(
                         val r = size.minDimension / 2f
                         val c = Offset(size.width / 2f, size.height / 2f)
                         drawCircle(
-                            if (index < pokeballs) Palette.Yellow else Palette.Track,
+                            if (index < coins) Palette.Yellow else Palette.Track,
                             r, c
                         )
                         drawCircle(Palette.Ink, r, c, style = Stroke(1.6f))

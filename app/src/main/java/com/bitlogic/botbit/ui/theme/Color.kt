@@ -1,4 +1,4 @@
-package com.bitlogic.pokebit.ui.theme
+package com.bitlogic.botbit.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

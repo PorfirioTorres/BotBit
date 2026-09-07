@@ -1,4 +1,4 @@
-package com.bitlogic.pokebit.game
+package com.bitlogic.botbit.game
 
 /**
  * Rectangulo alineado a los ejes, en unidades del mundo (tiles).

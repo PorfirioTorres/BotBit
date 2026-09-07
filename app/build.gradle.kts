@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.bitlogic.pokebit"
+    namespace = "com.bitlogic.botbit"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.bitlogic.pokebit"
+        applicationId = "com.bitlogic.botbit"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -57,6 +57,8 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
+    implementation(libs.kotlinx.coroutines.android)
+
     implementation(libs.animated.vector.drawable)
     implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
     implementation("com.google.firebase:firebase-analytics")
@@ -68,4 +70,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    implementation("androidx.compose.material:material-icons-extended:1.7.5")
 }

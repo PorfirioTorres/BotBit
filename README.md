@@ -1,2 +1,2 @@
-# PokeBit
-Pokebit
+# BotBit
+Botbit

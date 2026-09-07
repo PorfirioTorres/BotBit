@@ -1,18 +1,21 @@
-package com.bitlogic.pokebit.game
+package com.bitlogic.botbit.game
 
+import com.bitlogic.botbit.data.Characters
+import com.bitlogic.botbit.game.missions.MissionManager
+import com.bitlogic.botbit.game.missions.MissionType
+import com.bitlogic.botbit.ui.Palette
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
 enum class GameMode { LEVEL, ENDLESS, INVENTORY }
-
 enum class GameStatus { RUNNING, DEAD, COMPLETED }
 
-/**
- * Toda la simulacion del juego. NO usa estado de Compose a proposito:
- * es una clase de Kotlin normal que se actualiza con paso fijo.
- * La capa de UI solo la lee y la dibuja.
- */
-class World(val mode: GameMode, val level: LevelData?) {
+class World(
+    val mode: GameMode,
+    val level: LevelData?,
+    private val missionManager: MissionManager? = null,
+    private val characterId: String = "classic"
+) {
 
     val player = Player()
     val obstacles = ArrayList<Obstacle>()
@@ -24,7 +27,7 @@ class World(val mode: GameMode, val level: LevelData?) {
     var status = GameStatus.RUNNING
         private set
 
-    var pokeballs = 0
+    var coins = 0  // Antes pokeballs
         private set
 
     var attempts = 1
@@ -35,10 +38,11 @@ class World(val mode: GameMode, val level: LevelData?) {
 
     private val endless = EndlessGenerator(Random(System.nanoTime()))
     private var jumpBuffer = 0f
+    private var lastScoreNotified = 0
 
     val score: Int
         get() = (scrollX * GameConfig.POINTS_PER_TILE).toInt() +
-                pokeballs * GameConfig.POINTS_PER_POKEBALL
+                coins * GameConfig.POINTS_PER_COIN
 
     val progress: Float
         get() = if (mode == GameMode.LEVEL && level != null) {
@@ -47,6 +51,10 @@ class World(val mode: GameMode, val level: LevelData?) {
 
     val title: String
         get() = level?.name ?: "MODO INFINITO"
+
+    // Color del robot seleccionado
+    val characterColor: androidx.compose.ui.graphics.Color
+        get() = Characters.all.find { it.id == characterId }?.color ?: Palette.DarkYellow
 
     init {
         start(firstRun = true)
@@ -58,11 +66,12 @@ class World(val mode: GameMode, val level: LevelData?) {
         if (!firstRun) attempts++
         player.reset()
         scrollX = 0f
-        pokeballs = 0
+        coins = 0
         jumpBuffer = 0f
         status = GameStatus.RUNNING
         obstacles.clear()
         gaps.clear()
+        lastScoreNotified = 0
 
         if (mode == GameMode.LEVEL && level != null) {
             level.obstacles.forEach { obstacles.add(it.freshCopy()) }
@@ -75,8 +84,6 @@ class World(val mode: GameMode, val level: LevelData?) {
         }
     }
 
-    /** Un toque en pantalla. Se guarda en un buffer corto para que un toque
-     *  hecho una milesima antes de aterrizar no se pierda. */
     fun onTap() {
         if (status == GameStatus.RUNNING) jumpBuffer = GameConfig.JUMP_BUFFER
     }
@@ -96,13 +103,14 @@ class World(val mode: GameMode, val level: LevelData?) {
         val prevY = player.y
         val wasAirborne = !player.onGround
 
-        // 1. Salto (usa el onGround del paso anterior)
+        // 1. Salto
         if (jumpBuffer > 0f) {
             jumpBuffer -= dt
             if (player.onGround) {
                 player.vy = GameConfig.JUMP_VELOCITY
                 player.onGround = false
                 jumpBuffer = 0f
+                missionManager?.updateProgress(MissionType.JUMP_COUNT)
             }
         }
 
@@ -111,7 +119,7 @@ class World(val mode: GameMode, val level: LevelData?) {
         player.y += player.vy * dt
         if (!player.onGround) player.rotation += GameConfig.ROTATION_SPEED * dt
 
-        // 3. Resolucion de contactos. Se asume "en el aire" y las colisiones lo desmienten.
+        // 3. Resolucion de contactos
         var grounded = false
 
         val centerX = scrollX + GameConfig.PLAYER_X + GameConfig.PLAYER_SIZE / 2f
@@ -137,14 +145,15 @@ class World(val mode: GameMode, val level: LevelData?) {
         )
 
         for (ob in obstacles) {
-            if (ob.x > body.right + 2f) break          // lista ordenada por X
+            if (ob.x > body.right + 2f) break
             if (ob.right < body.left - 2f) continue
 
             when (ob.type) {
                 ObstacleType.COIN -> {
                     if (!ob.collected && body.overlaps(ob.bounds())) {
                         ob.collected = true
-                        pokeballs++
+                        coins++
+                        missionManager?.updateProgress(MissionType.COLLECT_COINS)
                     }
                 }
 
@@ -156,7 +165,7 @@ class World(val mode: GameMode, val level: LevelData?) {
                     }
                 }
 
-                ObstacleType.BLOCK, ObstacleType.PLATFORM -> {
+                ObstacleType.BLOCK, ObstacleType.PLATFORM, ObstacleType.RECTANGLE -> {
                     if (body.overlaps(ob.bounds())) {
                         val cameFromAbove =
                             player.vy <= 0f && prevY >= ob.y + ob.h - GameConfig.LANDING_TOLERANCE
@@ -166,23 +175,6 @@ class World(val mode: GameMode, val level: LevelData?) {
                             grounded = true
                             body = body.copy(bottom = player.y)
                         } else {
-                            // Choque de lado o desde abajo: en Geometry Dash eso mata.
-                            status = GameStatus.DEAD
-                            return
-                        }
-                    }
-                }
-                ObstacleType.RECTANGLE, ObstacleType.PLATFORM -> {
-                    if (body.overlaps(ob.bounds())) {
-                        val cameFromAbove =
-                            player.vy <= 0f && prevY >= ob.y + ob.h - GameConfig.LANDING_TOLERANCE
-                        if (cameFromAbove) {
-                            player.y = ob.y + ob.h
-                            player.vy = 0f
-                            grounded = true
-                            body = body.copy(bottom = player.y)
-                        } else {
-                            // Choque de lado o desde abajo: en Geometry Dash eso mata.
                             status = GameStatus.DEAD
                             return
                         }
@@ -191,7 +183,6 @@ class World(val mode: GameMode, val level: LevelData?) {
             }
         }
 
-        // 4. Caida al vacio
         if (player.y < GameConfig.DEATH_Y) {
             status = GameStatus.DEAD
             return
@@ -202,13 +193,17 @@ class World(val mode: GameMode, val level: LevelData?) {
         }
         player.onGround = grounded
 
-        // 5. Fin de nivel
+        val currentScore = score
+        if (currentScore >= lastScoreNotified + 100) {
+            missionManager?.updateProgress(MissionType.REACH_SCORE, currentScore)
+            lastScoreNotified = currentScore
+        }
+
         if (mode == GameMode.LEVEL && level != null && scrollX >= level.lengthTiles) {
             status = GameStatus.COMPLETED
         }
     }
 
-    /** En modo infinito la lista crece sin parar; se tiran los objetos ya pasados. */
     private fun prune() {
         val limit = scrollX - 5f
         while (obstacles.isNotEmpty() && obstacles[0].right < limit) obstacles.removeAt(0)

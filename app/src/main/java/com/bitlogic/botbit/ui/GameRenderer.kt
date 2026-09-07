@@ -1,4 +1,4 @@
-package com.bitlogic.pokebit.ui
+package com.bitlogic.botbit.ui
 
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -8,16 +8,10 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
-import com.bitlogic.pokebit.game.GameConfig
-import com.bitlogic.pokebit.game.ObstacleType
-import com.bitlogic.pokebit.game.World
+import com.bitlogic.botbit.game.GameConfig
+import com.bitlogic.botbit.game.ObstacleType
+import com.bitlogic.botbit.game.World
 
-/**
- * Dibuja el mundo entero en un solo Canvas.
- * Regla de oro: aqui NO se crean composables por entidad. Un cubo es
- * una llamada a drawRoundRect, no un @Composable. Eso es lo que permite
- * los 60 fps.
- */
 fun DrawScope.drawWorld(world: World) {
     val tile = size.width / GameConfig.TILES_VISIBLE_X
     val groundY = size.height * GameConfig.GROUND_SCREEN_RATIO
@@ -29,7 +23,7 @@ fun DrawScope.drawWorld(world: World) {
     val from = world.scrollX - 1f
     val to = world.scrollX + GameConfig.TILES_VISIBLE_X + 1f
 
-    // ---- Suelo, partido por los huecos ----
+    // ---- Suelo ----
     var cursor = from
     for (g in world.gaps) {
         if (g.right <= from) continue
@@ -64,14 +58,6 @@ fun DrawScope.drawWorld(world: World) {
                 drawRoundRect(Palette.Ink, topLeft, boxSize, radius, style = Stroke(stroke))
             }
 
-            ObstacleType.RECTANGLE -> {
-                val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
-                val boxSize = Size(ob.w * tile, ob.h * tile)
-                val radius = CornerRadius(tile * 0.12f, tile * 0.12f)
-                drawRoundRect(Palette.Surface, topLeft, boxSize, radius)
-                drawRoundRect(Palette.Ink, topLeft, boxSize, radius, style = Stroke(stroke))
-            }
-
             ObstacleType.PLATFORM -> {
                 val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
                 val boxSize = Size(ob.w * tile, ob.h * tile)
@@ -80,11 +66,13 @@ fun DrawScope.drawWorld(world: World) {
                 drawRect(Palette.Ink, topLeft, boxSize, style = Stroke(stroke * 0.7f))
             }
 
+            // MONEDAS
             ObstacleType.COIN -> {
                 if (!ob.collected) {
                     val cx = sx(ob.x + ob.w / 2f)
                     val cy = sy(ob.y + ob.h / 2f)
                     val r = ob.w * tile / 2f
+                    // Moneda dorada
                     drawCircle(Palette.Yellow, r, Offset(cx, cy))
                     drawLine(
                         Palette.Ink,
@@ -97,29 +85,48 @@ fun DrawScope.drawWorld(world: World) {
                     drawCircle(Palette.Ink, r * 0.26f, Offset(cx, cy), style = Stroke(stroke * 0.6f))
                 }
             }
+
+            else -> {}
         }
     }
 
-    // ---- Jugador ----
+    // ---- Jugador (Robot) ----
     val p = world.player
     val s = GameConfig.PLAYER_SIZE * tile
     val left = GameConfig.PLAYER_X * tile
     val top = sy(p.y) - s
     val cx = left + s / 2f
     val cy = top + s / 2f
+    
+    val robotColor = world.characterColor
 
     rotate(degrees = p.rotation, pivot = Offset(cx, cy)) {
-        // orejitas
-        drawRect(Palette.Ink, Offset(left + s * 0.10f, top - s * 0.16f), Size(s * 0.16f, s * 0.22f))
-        drawRect(Palette.Ink, Offset(left + s * 0.74f, top - s * 0.16f), Size(s * 0.16f, s * 0.22f))
+        // Antenas
+        drawRect(Palette.Ink, Offset(left + s * 0.15f, top - s * 0.30f), Size(s * 0.06f, s * 0.30f))
+        drawCircle(Palette.Red, s * 0.08f, Offset(left + s * 0.18f, top - s * 0.32f))
+        drawRect(Palette.Ink, Offset(left + s * 0.79f, top - s * 0.30f), Size(s * 0.06f, s * 0.30f))
+        drawCircle(Palette.Blue, s * 0.08f, Offset(left + s * 0.82f, top - s * 0.32f))
 
+        // Cuerpo del robot
         val radius = CornerRadius(s * 0.22f, s * 0.22f)
-        drawRoundRect(Palette.Yellow, Offset(left, top), Size(s, s), radius)
+        drawRoundRect(robotColor, Offset(left, top), Size(s, s), radius)
         drawRoundRect(Palette.Ink, Offset(left, top), Size(s, s), radius, style = Stroke(stroke * 1.3f))
 
-        // ojos
-        drawRect(Palette.Ink, Offset(left + s * 0.26f, top + s * 0.36f), Size(s * 0.11f, s * 0.17f))
-        drawRect(Palette.Ink, Offset(left + s * 0.63f, top + s * 0.36f), Size(s * 0.11f, s * 0.17f))
+        // Ojos LED
+        drawRect(Palette.Surface, Offset(left + s * 0.20f, top + s * 0.30f), Size(s * 0.15f, s * 0.12f))
+        drawRect(Palette.Ink, Offset(left + s * 0.22f, top + s * 0.32f), Size(s * 0.11f, s * 0.08f))
+        drawRect(Palette.Surface, Offset(left + s * 0.65f, top + s * 0.30f), Size(s * 0.15f, s * 0.12f))
+        drawRect(Palette.Ink, Offset(left + s * 0.67f, top + s * 0.32f), Size(s * 0.11f, s * 0.08f))
+
+        // Línea de boca LED
+        drawRect(Palette.Surface, Offset(left + s * 0.35f, top + s * 0.60f), Size(s * 0.30f, s * 0.06f))
+        drawRect(Palette.Ink, Offset(left + s * 0.36f, top + s * 0.61f), Size(s * 0.28f, s * 0.04f))
+        
+        // Detalles metálicos
+        drawCircle(Palette.Ink, s * 0.04f, Offset(left + s * 0.10f, top + s * 0.10f))
+        drawCircle(Palette.Ink, s * 0.04f, Offset(left + s * 0.90f, top + s * 0.10f))
+        drawCircle(Palette.Ink, s * 0.04f, Offset(left + s * 0.10f, top + s * 0.90f))
+        drawCircle(Palette.Ink, s * 0.04f, Offset(left + s * 0.90f, top + s * 0.90f))
     }
 }
 

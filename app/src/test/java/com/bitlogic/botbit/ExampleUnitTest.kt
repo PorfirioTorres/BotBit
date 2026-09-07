@@ -1,4 +1,4 @@
-package com.bitlogic.pokebit
+package com.bitlogic.botbit
 
 import org.junit.Test
 

@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Pokebit"
+rootProject.name = "Botbit"
 include(":app")
  
