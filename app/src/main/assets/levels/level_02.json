@@ -1,6 +1,7 @@
 {
-  "id": "pradera_verde",
-  "name": "NIVEL 1: PRADERA VERDE",
+  "id": "cueva_azul",
+  "name": "NIVEL 2: CUEVA AZUL",
+  "theme": "cueva",
   "length": 235.0,
   "scrollSpeed": 8.5,
   "gaps": [
@@ -34,7 +35,7 @@
       "h": 1
     },
     {
-      "type": "POKEBALL",
+      "type": "COIN",
       "x": 15.5,
       "y": 2.0,
       "w": 0.7,
@@ -132,7 +133,7 @@
       "h": 1
     },
     {
-      "type": "POKEBALL",
+      "type": "COIN",
       "x": 156.5,
       "y": 2.0,
       "w": 0.7,
@@ -202,7 +203,7 @@
       "h": 1
     },
     {
-      "type": "POKEBALL",
+      "type": "COIN",
       "x": 203.5,
       "y": 2.0,
       "w": 0.7,

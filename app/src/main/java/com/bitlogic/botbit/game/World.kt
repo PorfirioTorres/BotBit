@@ -41,6 +41,19 @@ class World(
     private var jumpBuffer = 0f
     private var lastScoreNotified = 0
 
+    // ---- Estado SOLO para animacion. No participa en la fisica ni en colisiones. ----
+    /** Reloj del juego en segundos. Avanza con el paso fijo, no con el reloj del sistema. */
+    var elapsed = 0f
+        private set
+
+    /** 1.0 justo al aterrizar, decae a 0. Sirve para el aplastado del robot. */
+    var landImpact = 0f
+        private set
+
+    /** Se enciende un instante al aterrizar para lanzar la nube de polvo. */
+    var dustBurst = 0f
+        private set
+
     val score: Int
         get() = (scrollX * GameConfig.POINTS_PER_TILE).toInt() +
                 coins * GameConfig.POINTS_PER_COIN
@@ -91,6 +104,11 @@ class World(
 
     fun update(dt: Float) {
         if (status != GameStatus.RUNNING) return
+
+        // Animacion: avanza con el mismo dt fijo para que nunca se desincronice.
+        elapsed += dt
+        landImpact = (landImpact - dt * 5f).coerceAtLeast(0f)
+        dustBurst = (dustBurst - dt * 2.2f).coerceAtLeast(0f)
 
         if (mode == GameMode.ENDLESS) {
             speed = (speed + GameConfig.ENDLESS_ACCEL * dt)
@@ -191,6 +209,8 @@ class World(
 
         if (grounded && wasAirborne) {
             player.rotation = (player.rotation / 90f).roundToInt() * 90f
+            landImpact = 1f
+            dustBurst = 1f
         }
         player.onGround = grounded
 

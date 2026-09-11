@@ -1,13 +1,10 @@
 {
   "id": "pradera_verde",
   "name": "NIVEL 1: PRADERA VERDE",
+  "theme": "pradera",
   "length": 235.0,
   "scrollSpeed": 8.5,
   "gaps": [
-    {
-      "x": 27.0,
-      "w": 2.5
-    },
     {
       "x": 78.0,
       "w": 3.2

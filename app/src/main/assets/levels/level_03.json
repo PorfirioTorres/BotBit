@@ -1,6 +1,7 @@
 {
-  "id": "pradera_verde",
-  "name": "NIVEL 1: PRADERA VERDE",
+  "id": "ciudad_naranja",
+  "name": "NIVEL 3: CIUDAD NARANJA",
+  "theme": "ciudad",
   "length": 235.0,
   "scrollSpeed": 8.5,
   "gaps": [
@@ -34,22 +35,21 @@
       "h": 1
     },
     {
-      "type": "POKEBALL",
+      "type": "COIN",
       "x": 15.5,
       "y": 2.0,
       "w": 0.7,
       "h": 0.7
     },
-
     {
-      "type": "POKEBALL",
+      "type": "COIN",
       "x": 156.5,
       "y": 2.0,
       "w": 0.7,
       "h": 0.7
     },
     {
-      "type": "POKEBALL",
+      "type": "COIN",
       "x": 203.5,
       "y": 2.0,
       "w": 0.7,

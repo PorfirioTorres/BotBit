@@ -5,6 +5,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -23,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -41,19 +44,25 @@ fun ScreenInventory(
     val isTablet = configuration.screenWidthDp >= 600
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     
+    // En horizontal el alto util cae a ~360dp. Apilar cabecera + preview (200dp)
+    // + rejilla + boton no cabe, y la rejilla con weight(1f) se quedaba en 0dp:
+    // por eso desaparecia y no se podia deslizar. En horizontal pasamos a dos
+    // columnas, que ademas aprovecha el ancho sobrante.
     val columns = when {
-        isTablet && !isLandscape -> 3
-        isTablet && isLandscape -> 4
+        isTablet && isLandscape -> 3
+        isTablet -> 3
         isLandscape -> 3
         else -> 2
     }
-    
+
+    val selected = characters.find { it.id == selectedId } ?: characters.firstOrNull()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.LightBg)
             .safeDrawingPadding()
-            .padding(horizontal = if (isTablet) 32.dp else 20.dp, vertical = 16.dp)
+            .padding(horizontal = if (isTablet) 32.dp else 20.dp, vertical = 12.dp)
     ) {
         // Header
         Row(
@@ -66,76 +75,144 @@ fun ScreenInventory(
             }
             Text(
                 text = "INVENTARIO",
-                fontSize = 22.sp,
+                fontSize = if (isLandscape && !isTablet) 18.sp else 22.sp,
                 fontWeight = FontWeight.Black,
                 color = Palette.Black
             )
             Spacer(Modifier.size(40.dp))
         }
-        
-        Spacer(Modifier.height(16.dp))
-        
-        val selected = characters.find { it.id == selectedId } ?: characters.first()
-        PreviewCard(character = selected, isTablet = isTablet)
-        
-        Spacer(Modifier.height(16.dp))
-        
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(columns),
-            horizontalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 12.dp),
-            verticalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 12.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-            items(characters) { character ->
-                SlotCard(
-                    character = character,
-                    isSelected = character.id == selectedId,
-                    onSelect = { viewModel.selectCharacter(it) },
-                    onBuy = { viewModel.buyCharacter(it) },
-                    isTablet = isTablet
-                )
+
+        Spacer(Modifier.height(12.dp))
+
+        if (isLandscape) {
+            // ---- HORIZONTAL: preview a la izquierda, rejilla a la derecha ----
+            Row(modifier = Modifier.fillMaxSize()) {
+
+                Column(
+                    modifier = Modifier
+                        .weight(0.38f)
+                        .fillMaxHeight()
+                ) {
+                    if (selected != null) {
+                        PreviewCard(
+                            character = selected,
+                            isTablet = isTablet,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    SelectButton(
+                        isCompact = true,
+                        onClick = { viewModel.confirmSelection() }
+                    )
+                }
+
+                Spacer(Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(0.62f)) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(columns),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(characters) { character ->
+                            SlotCard(
+                                character = character,
+                                isSelected = character.id == selectedId,
+                                onSelect = { viewModel.selectCharacter(it) },
+                                onBuy = { viewModel.buyCharacter(it) },
+                                isTablet = isTablet
+                            )
+                        }
+                    }
+                    Text(
+                        text = "DESBLOQUEA MAS JUGANDO DIARIAMENTE",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Palette.Muted,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
-        }
-        
-        Spacer(Modifier.height(16.dp))
-        
-        Button(
-            onClick = { viewModel.confirmSelection() },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Palette.DarkYellow)
-        ) {
+        } else {
+            // ---- VERTICAL: el diseno original ----
+            if (selected != null) {
+                PreviewCard(character = selected, isTablet = isTablet)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(columns),
+                horizontalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 12.dp),
+                verticalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 12.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                items(characters) { character ->
+                    SlotCard(
+                        character = character,
+                        isSelected = character.id == selectedId,
+                        onSelect = { viewModel.selectCharacter(it) },
+                        onBuy = { viewModel.buyCharacter(it) },
+                        isTablet = isTablet
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            SelectButton(isCompact = false, onClick = { viewModel.confirmSelection() })
+
             Text(
-                text = "SELECCIONAR",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Black,
-                color = Palette.Black
+                text = "DESBLOQUEA MAS JUGANDO DIARIAMENTE",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Palette.Muted,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+                textAlign = TextAlign.Center
             )
         }
-        
+    }
+}
+
+@Composable
+private fun SelectButton(isCompact: Boolean, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (isCompact) 46.dp else 56.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = Palette.DarkYellow)
+    ) {
         Text(
-            text = "DESBLOQUEA MAS JUGANDO DIARIAMENTE",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = Palette.Muted,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp),
-            textAlign = TextAlign.Center
+            text = "SELECCIONAR",
+            fontSize = if (isCompact) 15.sp else 18.sp,
+            fontWeight = FontWeight.Black,
+            color = Palette.Black
         )
     }
 }
 
 @Composable
-fun PreviewCard(character: CharacterData, isTablet: Boolean = false) {
+fun PreviewCard(
+    character: CharacterData,
+    isTablet: Boolean = false,
+    /** En horizontal se pasa Modifier.weight(1f) para que ocupe el alto disponible. */
+    modifier: Modifier = Modifier.height(if (isTablet) 240.dp else 200.dp)
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .height(if (isTablet) 240.dp else 200.dp)
             .background(Palette.Surface)
             .border(3.dp, Palette.Black, RoundedCornerShape(20.dp))
-            .padding(16.dp),
+            .padding(16.dp)
+            // Red de seguridad: si la tarjeta queda muy baja, el contenido
+            // se desliza en vez de recortarse.
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         RobotPreview(color = character.color, modifier = Modifier.size(if (isTablet) 80.dp else 60.dp))
@@ -161,11 +238,11 @@ fun PreviewCard(character: CharacterData, isTablet: Boolean = false) {
 }
 
 @Composable
-fun RobotPreview(color: Color, modifier: Modifier = Modifier.size(60.dp)) {
+fun RobotPreview(color: Color, modifier: Modifier = Modifier.size(60.dp), boxHeight: Dp = 80.dp) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(80.dp)
+            .height(boxHeight)
     ) {
         Box(
             modifier = Modifier

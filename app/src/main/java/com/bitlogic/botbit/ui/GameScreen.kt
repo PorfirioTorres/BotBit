@@ -64,6 +64,12 @@ fun GameScreen(
         World(mode, level, missionManager, selectedCharacter, tilesVisible) 
     }
 
+    // Tema visual del nivel y renderizador de fondo.
+    // El BackgroundRenderer cachea sus rutas: se crea una vez, no por frame.
+    val theme = remember(level) { LevelTheme.byId(level?.theme) }
+    // Objetos de dibujo reutilizables: se crean una vez, no por frame.
+    val scratch = remember { RenderScratch() }
+
     val frame = remember { mutableStateOf(0) }
 
     var status by remember { mutableStateOf(GameStatus.RUNNING) }
@@ -140,7 +146,7 @@ fun GameScreen(
             ) {
                 Canvas(Modifier.fillMaxSize()) {
                     frame.value
-                    drawWorld(world, tilesVisible)
+                    drawWorld(world, tilesVisible, theme, scratch)
                 }
 
                 if (world.attempts == 1 && hudProgress < 0.04f && mode == GameMode.LEVEL) {

@@ -9,7 +9,9 @@ data class LevelData(
     val lengthTiles: Int,
     val scrollSpeed: Float,
     val obstacles: List<Obstacle>,
-    val gaps: List<Gap>
+    val gaps: List<Gap>,
+    /** Tema visual. Si el JSON no lo trae, se usa el de por defecto. */
+    val theme: String = "pradera"
 )
 
 object LevelLoader {
@@ -42,6 +44,7 @@ object LevelLoader {
         }
 
         return LevelData(
+            theme = root.optString("theme", "pradera"),
             id = root.getString("id"),
             name = root.getString("name"),
             lengthTiles = root.getInt("length"),
