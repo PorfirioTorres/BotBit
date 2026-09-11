@@ -14,7 +14,8 @@ class World(
     val mode: GameMode,
     val level: LevelData?,
     private val missionManager: MissionManager? = null,
-    private val characterId: String = "classic"
+    private val characterId: String = "classic",
+    private val tilesVisibleX: Float = GameConfig.TILES_VISIBLE_X
 ) {
 
     val player = Player()
@@ -27,7 +28,7 @@ class World(
     var status = GameStatus.RUNNING
         private set
 
-    var coins = 0  // Antes pokeballs
+    var coins = 0
         private set
 
     var attempts = 1
@@ -80,7 +81,7 @@ class World(
         } else {
             speed = GameConfig.BASE_SCROLL_SPEED
             endless.reset()
-            endless.generateUpTo(GameConfig.TILES_VISIBLE_X * 3f, obstacles, gaps)
+            endless.generateUpTo(tilesVisibleX * 3f, obstacles, gaps)
         }
     }
 
@@ -94,7 +95,7 @@ class World(
         if (mode == GameMode.ENDLESS) {
             speed = (speed + GameConfig.ENDLESS_ACCEL * dt)
                 .coerceAtMost(GameConfig.ENDLESS_MAX_SPEED)
-            endless.generateUpTo(scrollX + GameConfig.TILES_VISIBLE_X * 3f, obstacles, gaps)
+            endless.generateUpTo(scrollX + tilesVisibleX * 3f, obstacles, gaps)
             prune()
         }
 

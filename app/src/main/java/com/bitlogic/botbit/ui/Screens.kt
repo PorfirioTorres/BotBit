@@ -1,5 +1,6 @@
 package com.bitlogic.botbit.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,12 +37,23 @@ fun ScreenInventory(
     val characters by viewModel.characters.collectAsState()
     val selectedId by viewModel.selectedCharacter.collectAsState()
     
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    
+    val columns = when {
+        isTablet && !isLandscape -> 3
+        isTablet && isLandscape -> 4
+        isLandscape -> 3
+        else -> 2
+    }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Palette.LightBg)
             .safeDrawingPadding()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
+            .padding(horizontal = if (isTablet) 32.dp else 20.dp, vertical = 16.dp)
     ) {
         // Header
         Row(
@@ -63,14 +76,14 @@ fun ScreenInventory(
         Spacer(Modifier.height(16.dp))
         
         val selected = characters.find { it.id == selectedId } ?: characters.first()
-        PreviewCard(character = selected)
+        PreviewCard(character = selected, isTablet = isTablet)
         
         Spacer(Modifier.height(16.dp))
         
         LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            columns = GridCells.Fixed(columns),
+            horizontalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 12.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isTablet) 16.dp else 12.dp),
             modifier = Modifier.weight(1f)
         ) {
             items(characters) { character ->
@@ -78,7 +91,8 @@ fun ScreenInventory(
                     character = character,
                     isSelected = character.id == selectedId,
                     onSelect = { viewModel.selectCharacter(it) },
-                    onBuy = { viewModel.buyCharacter(it) }
+                    onBuy = { viewModel.buyCharacter(it) },
+                    isTablet = isTablet
                 )
             }
         }
@@ -114,40 +128,40 @@ fun ScreenInventory(
 }
 
 @Composable
-fun PreviewCard(character: CharacterData) {
+fun PreviewCard(character: CharacterData, isTablet: Boolean = false) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(if (isTablet) 240.dp else 200.dp)
             .background(Palette.Surface)
             .border(3.dp, Palette.Black, RoundedCornerShape(20.dp))
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        RobotPreview(color = character.color)
+        RobotPreview(color = character.color, modifier = Modifier.size(if (isTablet) 80.dp else 60.dp))
         Spacer(Modifier.height(8.dp))
         Text(
             text = character.name,
-            fontSize = 20.sp,
+            fontSize = if (isTablet) 24.sp else 20.sp,
             fontWeight = FontWeight.Black,
             color = Palette.Black
         )
         Text(
             text = character.type,
-            fontSize = 12.sp,
+            fontSize = if (isTablet) 14.sp else 12.sp,
             fontWeight = FontWeight.Bold,
             color = Palette.Muted
         )
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Palette.Track))
         Spacer(Modifier.height(8.dp))
         character.stats.forEach { (label, value) ->
-            StatRow(label = label, filledBlocks = value)
+            StatRow(label = label, filledBlocks = value, isTablet = isTablet)
         }
     }
 }
 
 @Composable
-fun RobotPreview(color: Color) {
+fun RobotPreview(color: Color, modifier: Modifier = Modifier.size(60.dp)) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -162,20 +176,19 @@ fun RobotPreview(color: Color) {
                 .border(2.dp, Palette.Black)
         )
         Box(
-            modifier = Modifier
-                .size(60.dp)
+            modifier = modifier
                 .align(Alignment.TopCenter)
                 .background(color)
                 .border(3.dp, Palette.Black, RoundedCornerShape(8.dp))
         ) {
             // Antenas
-            Box(modifier = Modifier.size(6.dp, 18.dp).background(Palette.Black).align(Alignment.TopStart))
-            Box(modifier = Modifier.size(6.dp, 18.dp).background(Palette.Black).align(Alignment.TopEnd))
+            Box(modifier = Modifier.fillMaxHeight(0.3f).fillMaxWidth(0.1f).background(Palette.Black).align(Alignment.TopStart))
+            Box(modifier = Modifier.fillMaxHeight(0.3f).fillMaxWidth(0.1f).background(Palette.Black).align(Alignment.TopEnd))
             // Ojos LED
-            Box(modifier = Modifier.size(12.dp, 8.dp).background(Palette.Surface).align(Alignment.CenterStart).offset(x = 4.dp))
-            Box(modifier = Modifier.size(12.dp, 8.dp).background(Palette.Surface).align(Alignment.CenterEnd).offset(x = (-4).dp))
+            Box(modifier = Modifier.fillMaxHeight(0.2f).fillMaxWidth(0.2f).background(Palette.Surface).align(Alignment.CenterStart).offset(x = 4.dp))
+            Box(modifier = Modifier.fillMaxHeight(0.2f).fillMaxWidth(0.2f).background(Palette.Surface).align(Alignment.CenterEnd).offset(x = (-4).dp))
             // Boca
-            Box(modifier = Modifier.size(20.dp, 4.dp).background(Palette.Surface).align(Alignment.BottomCenter).offset(y = (-6).dp))
+            Box(modifier = Modifier.fillMaxHeight(0.1f).fillMaxWidth(0.3f).background(Palette.Surface).align(Alignment.BottomCenter).offset(y = (-6).dp))
         }
     }
 }
@@ -185,12 +198,13 @@ fun SlotCard(
     character: CharacterData,
     isSelected: Boolean,
     onSelect: (String) -> Unit,
-    onBuy: (String) -> Unit
+    onBuy: (String) -> Unit,
+    isTablet: Boolean = false
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(130.dp)
+            .height(if (isTablet) 150.dp else 130.dp)
             .background(if (isSelected) Palette.YellowBg else Palette.Surface)
             .border(
                 width = if (isSelected) 3.dp else 2.dp,
@@ -207,13 +221,13 @@ fun SlotCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(if (isTablet) 40.dp else 28.dp)
                     .background(character.color)
                     .border(3.dp, Palette.Black, RoundedCornerShape(8.dp))
             )
             Text(
                 text = character.name,
-                fontSize = 13.sp,
+                fontSize = if (isTablet) 15.sp else 13.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = if (character.locked) Palette.Muted else Palette.Black
             )
@@ -222,11 +236,11 @@ fun SlotCard(
                 Button(
                     onClick = { onBuy(character.id) },
                     colors = ButtonDefaults.buttonColors(containerColor = Palette.Yellow),
-                    modifier = Modifier.height(24.dp).padding(horizontal = 8.dp)
+                    modifier = Modifier.height(if (isTablet) 30.dp else 24.dp).padding(horizontal = 8.dp)
                 ) {
                     Text(
                         text = "MONEDA ${character.price}",
-                        fontSize = 10.sp,
+                        fontSize = if (isTablet) 12.sp else 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Palette.Black
                     )
@@ -237,14 +251,14 @@ fun SlotCard(
         if (character.locked) {
             Box(
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(if (isTablet) 24.dp else 18.dp)
                     .align(Alignment.BottomEnd)
                     .background(Palette.Red)
                     .border(1.5.dp, Palette.Black, RoundedCornerShape(50))
             ) {
                 Box(
                     modifier = Modifier
-                        .size(10.dp)
+                        .size(if (isTablet) 14.dp else 10.dp)
                         .align(Alignment.Center)
                         .border(2.dp, Palette.Surface)
                 )
@@ -253,14 +267,14 @@ fun SlotCard(
         if (isSelected) {
             Box(
                 modifier = Modifier
-                    .size(18.dp)
+                    .size(if (isTablet) 24.dp else 18.dp)
                     .align(Alignment.TopEnd)
                     .background(Palette.Green)
                     .border(1.5.dp, Palette.Black, RoundedCornerShape(50))
             ) {
                 Box(
                     modifier = Modifier
-                        .size(8.dp)
+                        .size(if (isTablet) 12.dp else 8.dp)
                         .align(Alignment.Center)
                         .background(Palette.Surface)
                         .border(1.dp, Palette.Black, RoundedCornerShape(50))
@@ -271,7 +285,7 @@ fun SlotCard(
 }
 
 @Composable
-fun StatRow(label: String, filledBlocks: Int) {
+fun StatRow(label: String, filledBlocks: Int, isTablet: Boolean = false) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -279,7 +293,7 @@ fun StatRow(label: String, filledBlocks: Int) {
     ) {
         Text(
             text = label,
-            fontSize = 12.sp,
+            fontSize = if (isTablet) 14.sp else 12.sp,
             fontWeight = FontWeight.Bold,
             color = Palette.Muted
         )
@@ -287,7 +301,7 @@ fun StatRow(label: String, filledBlocks: Int) {
             for (i in 1..5) {
                 Box(
                     modifier = Modifier
-                        .size(12.dp)
+                        .size(if (isTablet) 16.dp else 12.dp)
                         .background(if (i <= filledBlocks) Palette.DarkYellow else Palette.LightGrey)
                         .border(1.5.dp, Palette.Black, RoundedCornerShape(2.dp))
                 )

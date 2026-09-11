@@ -33,6 +33,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,8 +56,12 @@ fun GameScreen(
     onRunFinished: (score: Int, coins: Int, completed: Boolean) -> Unit,
     onMenu: () -> Unit
 ) {
-    val world = remember(mode, level, missionManager, selectedCharacter) { 
-        World(mode, level, missionManager, selectedCharacter) 
+    val configuration = LocalConfiguration.current
+    val isTablet = configuration.screenWidthDp >= 600
+    val tilesVisible = if (isTablet) 16f else GameConfig.TILES_VISIBLE_X
+    
+    val world = remember(mode, level, missionManager, selectedCharacter, tilesVisible) { 
+        World(mode, level, missionManager, selectedCharacter, tilesVisible) 
     }
 
     val frame = remember { mutableStateOf(0) }
@@ -135,7 +140,7 @@ fun GameScreen(
             ) {
                 Canvas(Modifier.fillMaxSize()) {
                     frame.value
-                    drawWorld(world)
+                    drawWorld(world, tilesVisible)
                 }
 
                 if (world.attempts == 1 && hudProgress < 0.04f && mode == GameMode.LEVEL) {

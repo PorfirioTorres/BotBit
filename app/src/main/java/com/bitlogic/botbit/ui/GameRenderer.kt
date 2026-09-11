@@ -12,8 +12,8 @@ import com.bitlogic.botbit.game.GameConfig
 import com.bitlogic.botbit.game.ObstacleType
 import com.bitlogic.botbit.game.World
 
-fun DrawScope.drawWorld(world: World) {
-    val tile = size.width / GameConfig.TILES_VISIBLE_X
+fun DrawScope.drawWorld(world: World, tilesVisibleX: Float = GameConfig.TILES_VISIBLE_X) {
+    val tile = size.width / tilesVisibleX
     val groundY = size.height * GameConfig.GROUND_SCREEN_RATIO
     val stroke = tile * 0.075f
 
@@ -21,7 +21,7 @@ fun DrawScope.drawWorld(world: World) {
     fun sy(worldY: Float): Float = groundY - worldY * tile
 
     val from = world.scrollX - 1f
-    val to = world.scrollX + GameConfig.TILES_VISIBLE_X + 1f
+    val to = world.scrollX + tilesVisibleX + 1f
 
     // ---- Suelo ----
     var cursor = from

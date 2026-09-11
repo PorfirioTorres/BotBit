@@ -2,7 +2,10 @@ package com.bitlogic.botbit.game
 
 object GameConfig {
     // --- Camara ---
-    const val TILES_VISIBLE_X = 14f
+    /** Cuantos tiles caben a lo ancho de la pantalla. */
+    const val TILES_VISIBLE_X = 12f  // Valor base, se ajusta segun pantalla
+
+    /** Altura del suelo como fraccion del alto del area de juego. */
     const val GROUND_SCREEN_RATIO = 0.74f
 
     // --- Jugador ---
