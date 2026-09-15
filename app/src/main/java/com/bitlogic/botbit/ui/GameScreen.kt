@@ -40,14 +40,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import com.bitlogic.botbit.game.GameConfig
+import com.bitlogic.botbit.game.GameKind
 import com.bitlogic.botbit.game.GameMode
 import com.bitlogic.botbit.game.GameStatus
 import com.bitlogic.botbit.game.LevelData
+import com.bitlogic.botbit.game.GameWorld
 import com.bitlogic.botbit.game.World
+import com.bitlogic.botbit.game.TowerWorld
 import com.bitlogic.botbit.game.missions.MissionManager
+import com.bitlogic.botbit.game.InputEvent
 
 @Composable
 fun GameScreen(
+    kind: GameKind = GameKind.RUNNER,
     mode: GameMode,
     level: LevelData?,
     bestScore: Int,
@@ -60,8 +65,12 @@ fun GameScreen(
     val isTablet = configuration.screenWidthDp >= 600
     val tilesVisible = if (isTablet) 16f else GameConfig.TILES_VISIBLE_X
     
-    val world = remember(mode, level, missionManager, selectedCharacter, tilesVisible) { 
-        World(mode, level, missionManager, selectedCharacter, tilesVisible) 
+    val world: GameWorld = remember(kind, mode, level, missionManager, selectedCharacter, tilesVisible) {
+        if (kind == GameKind.TOWER) {
+            TowerWorld(level, selectedCharacter)
+        } else {
+            World(mode, level, missionManager, selectedCharacter, tilesVisible)
+        }
     }
 
     // Tema visual del nivel y renderizador de fondo.
@@ -129,7 +138,7 @@ fun GameScreen(
             Hud(
                 title = world.title,
                 progress = hudProgress,
-                showProgress = mode == GameMode.LEVEL,
+                showProgress = (kind == GameKind.RUNNER && mode == GameMode.LEVEL),
                 score = hudScore,
                 coins = hudCoins,
                 paused = paused,
@@ -141,12 +150,21 @@ fun GameScreen(
                     .weight(1f)
                     .fillMaxWidth()
                     .pointerInput(world) {
-                        detectTapGestures(onPress = { world.onTap() })
+                        detectTapGestures(
+                            onTap = { world.onInput(InputEvent.Tap) },
+                            onPress = { 
+                                world.onInput(InputEvent.Press)
+                                tryAwaitRelease()
+                                world.onInput(InputEvent.Release(0f)) // TODO: swipe para dirX
+                            }
+                        )
                     }
             ) {
                 Canvas(Modifier.fillMaxSize()) {
                     frame.value
-                    drawWorld(world, tilesVisible, theme, scratch)
+                    if (world is World) {
+                        drawWorld(world, tilesVisible, theme, scratch)
+                    }
                 }
 
                 if (world.attempts == 1 && hudProgress < 0.04f && mode == GameMode.LEVEL) {
