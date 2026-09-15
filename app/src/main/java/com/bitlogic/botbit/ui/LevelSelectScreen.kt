@@ -123,6 +123,9 @@ private fun LevelCard(
     val shape = RoundedCornerShape(18.dp)
     val theme = LevelTheme.byId(level.theme)
 
+    // Igual que en ModeSelectScreen: se llama siempre, se aplica solo en horizontal.
+    val cardScroll = rememberScrollState()
+
     Column(
         modifier = modifier
             .clip(shape)
@@ -134,7 +137,8 @@ private fun LevelCard(
             )
             .then(if (unlocked) Modifier.clickable { onSelect(level) } else Modifier)
             .padding(14.dp)
-            .verticalScroll(rememberScrollState())
+            // Ver nota en ModeSelectScreen: nunca dos scrolls verticales anidados.
+            .then(if (compact) Modifier.verticalScroll(cardScroll) else Modifier)
     ) {
         // Franja con los colores del tema: identifica el nivel de un vistazo
         Row(

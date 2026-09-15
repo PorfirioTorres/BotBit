@@ -109,6 +109,10 @@ private fun ModeCard(
     val enabled = kind.available
     val shape = RoundedCornerShape(18.dp)
 
+    // rememberScrollState se llama SIEMPRE, aunque no se use: llamarlo dentro
+    // de un if rompe la memorizacion posicional de Compose.
+    val cardScroll = rememberScrollState()
+
     Column(
         modifier = modifier
             .clip(shape)
@@ -119,7 +123,10 @@ private fun ModeCard(
                 shape = shape
             )
             .padding(14.dp)
-            .verticalScroll(rememberScrollState())
+            // Solo scrollea en horizontal, donde la tarjeta tiene alto acotado
+            // por weight(1f). En vertical el Column de afuera ya scrollea, y
+            // anidar dos scrolls verticales tira la app.
+            .then(if (compact) Modifier.verticalScroll(cardScroll) else Modifier)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
