@@ -1,0 +1,27 @@
+> Task :app:signingReport
+Variant: debug
+Config: debug
+Store: C:\Users\juan\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: EF:F6:FD:A5:14:FF:44:5E:0D:DF:7E:9B:3B:5C:16:F4
+SHA1: 26:1E:46:C3:C5:FC:F0:76:40:47:8A:CE:16:1A:41:FC:00:AD:01:2C
+SHA-256: C2:FA:22:09:B3:16:29:D3:66:DC:07:43:AE:36:AA:E0:1B:AF:77:3E:DA:10:BC:AD:1E:0A:7A:EF:73:88:B9:FC
+Valid until: viernes, 4 de agosto de 2056
+----------
+Variant: release
+Config: none
+----------
+Variant: debugAndroidTest
+Config: debug
+Store: C:\Users\juan\.android\debug.keystore
+Alias: AndroidDebugKey
+MD5: EF:F6:FD:A5:14:FF:44:5E:0D:DF:7E:9B:3B:5C:16:F4
+SHA1: 26:1E:46:C3:C5:FC:F0:76:40:47:8A:CE:16:1A:41:FC:00:AD:01:2C
+SHA-256: C2:FA:22:09:B3:16:29:D3:66:DC:07:43:AE:36:AA:E0:1B:AF:77:3E:DA:10:BC:AD:1E:0A:7A:EF:73:88:B9:FC
+Valid until: viernes, 4 de agosto de 2056
+----------
+
+
+
+380477130852-rdiducdt58poqm4vm4ellh42dg2ost5u.apps.googleusercontent.com
+
