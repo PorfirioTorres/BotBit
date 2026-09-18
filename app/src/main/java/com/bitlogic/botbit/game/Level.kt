@@ -23,9 +23,14 @@ object LevelLoader {
         val jsonObs = root.getJSONArray("obstacles")
         for (i in 0 until jsonObs.length()) {
             val o = jsonObs.getJSONObject(i)
+            // Un tipo desconocido en el JSON (una errata, o un tipo que se
+            // renombro) tiraba la app con IllegalArgumentException. Ahora se
+            // ignora esa entrada y el resto del nivel carga igual.
+            val type = runCatching { ObstacleType.valueOf(o.getString("type")) }.getOrNull()
+                ?: continue
             obs.add(
                 Obstacle(
-                    type = ObstacleType.valueOf(o.getString("type")),
+                    type = type,
                     x = o.getDouble("x").toFloat(),
                     y = o.getDouble("y").toFloat(),
                     w = o.getDouble("w").toFloat(),

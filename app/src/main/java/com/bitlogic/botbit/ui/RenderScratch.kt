@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.Path
  *
  * Se crea UNA vez en GameScreen con remember y se reutiliza en cada frame.
  * Crear un Path dentro del Canvas parece inofensivo, pero a 60 fps con varios
- * picos en pantalla son cientos de objetos por segundo. Cuando el recolector
+ * picos en pantalla son cientos de objetos por second. Cuando el recolector
  * de basura corre, se pierde un frame entero, y en un juego de precision eso
  * es una muerte que el jugador no se merecia.
  *

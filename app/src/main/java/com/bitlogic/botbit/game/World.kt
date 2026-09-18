@@ -16,7 +16,7 @@ class World(
     private val missionManager: MissionManager? = null,
     private val characterId: String = "classic",
     private val tilesVisibleX: Float = GameConfig.TILES_VISIBLE_X
-) {
+) : GameWorld {
 
     val player = Player()
     val obstacles = ArrayList<Obstacle>()
@@ -25,7 +25,7 @@ class World(
     var scrollX = 0f
         private set
 
-    var status = GameStatus.RUNNING
+    override var status = GameStatus.RUNNING
         private set
 
     var coins = 0
@@ -43,7 +43,7 @@ class World(
 
     // ---- Estado SOLO para animacion. No participa en la fisica ni en colisiones. ----
     /** Reloj del juego en segundos. Avanza con el paso fijo, no con el reloj del sistema. */
-    var elapsed = 0f
+    override var elapsed = 0f
         private set
 
     /** 1.0 justo al aterrizar, decae a 0. Sirve para el aplastado del robot. */
@@ -54,16 +54,16 @@ class World(
     var dustBurst = 0f
         private set
 
-    val score: Int
+    override val score: Int
         get() = (scrollX * GameConfig.POINTS_PER_TILE).toInt() +
                 coins * GameConfig.POINTS_PER_COIN
 
-    val progress: Float
+    override val progress: Float
         get() = if (mode == GameMode.LEVEL && level != null) {
             (scrollX / level.lengthTiles).coerceIn(0f, 1f)
         } else 0f
 
-    val title: String
+    override val title: String
         get() = level?.name ?: "MODO INFINITO"
 
     // Color del robot seleccionado
@@ -74,7 +74,9 @@ class World(
         start(firstRun = true)
     }
 
-    fun retry() = start(firstRun = false)
+    override val kind: GameKind get() = GameKind.RUNNER
+
+    override fun retry() = start(firstRun = false)
 
     private fun start(firstRun: Boolean) {
         if (!firstRun) attempts++
@@ -102,7 +104,12 @@ class World(
         if (status == GameStatus.RUNNING) jumpBuffer = GameConfig.JUMP_BUFFER
     }
 
-    fun update(dt: Float) {
+    /** El runner solo reacciona al toque. Move, Press y Release se ignoran. */
+    override fun onInput(event: InputEvent) {
+        if (event is InputEvent.Tap) onTap()
+    }
+
+    override fun update(dt: Float) {
         if (status != GameStatus.RUNNING) return
 
         // Animacion: avanza con el mismo dt fijo para que nunca se desincronice.

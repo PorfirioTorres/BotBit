@@ -56,14 +56,14 @@ class BackgroundRenderer {
                 for (i in 0 until DECOR_COUNT) {
                     if (theme.starField) {
                         // Parpadeo sutil, desfasado por indice
-                        val twinkle = 0.55f + 0.45f * sin((elapsed * 1.7f + i * 1.3f).toDouble()).toFloat()
+                        val twinkle = 0.55f + 0.45f * sin(elapsed * 1.7f + i * 1.3f)
                         drawCircle(
                             color = theme.decor.copy(alpha = 0.25f + 0.55f * twinkle),
                             radius = decorR[i],
                             center = Offset(decorX[i], decorY[i])
                         )
                     } else {
-                        val bob = sin((elapsed * 0.5f + i * 0.9f).toDouble()).toFloat() * tile * 0.10f
+                        val bob = sin(elapsed * 0.5f + i * 0.9f) * tile * 0.10f
                         val c = Offset(decorX[i], decorY[i] + bob)
                         drawCircle(theme.decor.copy(alpha = 0.85f), decorR[i], c)
                         drawCircle(
@@ -173,7 +173,7 @@ class BackgroundRenderer {
             for (j in 1..segments) {
                 val f = j.toFloat() / segments
                 // media onda de seno: sube y baja volviendo exactamente a baseY
-                val y = baseY - h * sin((f * Math.PI.toFloat()).toDouble()).toFloat()
+                val y = baseY - h * sin(f * Math.PI.toFloat())
                 path.lineTo(x0 + step * f, y)
             }
         }

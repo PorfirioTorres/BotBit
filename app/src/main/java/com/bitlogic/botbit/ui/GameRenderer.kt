@@ -3,7 +3,6 @@ package com.bitlogic.botbit.ui
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -73,7 +72,7 @@ fun DrawScope.drawWorld(
                 drawPath(path, theme.obstacleEdge, style = Stroke(stroke))
                 // Brillo en la punta: hace que el peligro se lea al instante
                 drawCircle(
-                    theme.obstacleEdge.copy(alpha = 0.35f + 0.35f * sin((t * 4f + ob.x).toDouble()).toFloat()),
+                    theme.obstacleEdge.copy(alpha = 0.35f + 0.35f * sin(t * 4f + ob.x)),
                     tile * 0.07f,
                     Offset(sx(ob.x + ob.w / 2f), sy(ob.y + ob.h))
                 )
@@ -103,8 +102,8 @@ fun DrawScope.drawWorld(
             ObstacleType.COIN -> {
                 if (!ob.collected) {
                     val phase = t * 3.4f + ob.x * 0.7f
-                    val spin = abs(cos(phase.toDouble()).toFloat()).coerceAtLeast(0.14f)
-                    val bob = sin((phase * 0.75f).toDouble()).toFloat() * tile * 0.10f
+                    val spin = abs(cos(phase)).coerceAtLeast(0.14f)
+                    val bob = sin(phase * 0.75f) * tile * 0.10f
                     val cx = sx(ob.x + ob.w / 2f)
                     val cy = sy(ob.y + ob.h / 2f) + bob
                     val r = ob.w * tile / 2f
@@ -181,7 +180,7 @@ private fun DrawScope.drawRobot(
 
     // Propulsor: solo en el aire, con parpadeo rapido
     if (!world.player.onGround) {
-        val flame = 0.55f + 0.45f * sin((t * 38f).toDouble()).toFloat()
+        val flame = 0.55f + 0.45f * sin(t * 38f)
         val fw = s * 0.34f
         val fh = s * 0.40f * flame
         val fx = left + s / 2f - fw / 2f
@@ -204,7 +203,7 @@ private fun DrawScope.drawRobot(
     }
 
     // Antenas con luces que alternan
-    val blinkA = sin((t * 5f).toDouble()).toFloat() > 0f
+    val blinkA = sin(t * 5f) > 0f
     drawRect(Palette.Ink, Offset(left + s * 0.15f, top - s * 0.30f), Size(s * 0.06f, s * 0.30f))
     drawCircle(
         if (blinkA) Palette.Red else Palette.Red.copy(alpha = 0.35f),
@@ -234,7 +233,7 @@ private fun DrawScope.drawRobot(
     }
 
     // Boca LED: barras que laten
-    val pulse = 0.5f + 0.5f * sin((t * 6f).toDouble()).toFloat()
+    val pulse = 0.5f + 0.5f * sin(t * 6f)
     drawRect(Palette.Surface, Offset(left + s * 0.35f, top + s * 0.60f), Size(s * 0.30f, s * 0.06f))
     drawRect(
         theme.groundEdge.copy(alpha = 0.35f + 0.65f * pulse),
