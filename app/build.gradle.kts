@@ -74,7 +74,10 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
 
     // Firebase BoM & Auth
+    implementation(platform("com.google.firebase:firebase-bom:34.18.0"))
+    implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore") // AGREGADO PARA ACTIVIDAD 4
 
     // AndroidX Credential Manager & Google Identity
     implementation("androidx.credentials:credentials:1.3.0")
