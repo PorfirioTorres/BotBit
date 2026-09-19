@@ -18,7 +18,7 @@ data class Mission(
     val rewardCharacter: String? = null
 )
 
-data class MissionProgress(
+data class .MissionProgress(
     val mission: Mission,
     var progress: Int = 0,
     var completed: Boolean = false

@@ -15,9 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.bitlogic.botbit.data.CharacterData
+import com.bitlogic.botbit.ui.components.ZoomPreviewDialog
 import com.bitlogic.botbit.ui.inventory.InventoryViewModel
 
 @Composable
@@ -40,14 +39,12 @@ fun ScreenInventory(
     val characters by viewModel.characters.collectAsState()
     val selectedId by viewModel.selectedCharacter.collectAsState()
     
+    var showZoom by remember { mutableStateOf(false) }
+
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp >= 600
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     
-    // En horizontal el alto util cae a ~360dp. Apilar cabecera + preview (200dp)
-    // + rejilla + boton no cabe, y la rejilla con weight(1f) se quedaba en 0dp:
-    // por eso desaparecia y no se podia deslizar. En horizontal pasamos a dos
-    // columnas, que ademas aprovecha el ancho sobrante.
     val columns = when {
         isTablet && isLandscape -> 3
         isTablet -> 3
@@ -97,7 +94,8 @@ fun ScreenInventory(
                         PreviewCard(
                             character = selected,
                             isTablet = isTablet,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            onZoomClick = { showZoom = true }
                         )
                     }
                     Spacer(Modifier.height(10.dp))
@@ -139,7 +137,11 @@ fun ScreenInventory(
         } else {
             // ---- VERTICAL: el diseno original ----
             if (selected != null) {
-                PreviewCard(character = selected, isTablet = isTablet)
+                PreviewCard(
+                    character = selected,
+                    isTablet = isTablet,
+                    onZoomClick = { showZoom = true }
+                )
             }
 
             Spacer(Modifier.height(16.dp))
@@ -177,6 +179,10 @@ fun ScreenInventory(
             )
         }
     }
+
+    if (showZoom && selected != null) {
+        ZoomPreviewDialog(character = selected, onDismiss = { showZoom = false })
+    }
 }
 
 @Composable
@@ -202,7 +208,8 @@ fun PreviewCard(
     character: CharacterData,
     isTablet: Boolean = false,
     /** En horizontal se pasa Modifier.weight(1f) para que ocupe el alto disponible. */
-    modifier: Modifier = Modifier.height(if (isTablet) 240.dp else 200.dp)
+    modifier: Modifier = Modifier.height(if (isTablet) 240.dp else 200.dp),
+    onZoomClick: () -> Unit = {}
 ) {
     Column(
         modifier = modifier
@@ -210,12 +217,15 @@ fun PreviewCard(
             .background(Palette.Surface)
             .border(3.dp, Palette.Black, RoundedCornerShape(20.dp))
             .padding(16.dp)
-            // Red de seguridad: si la tarjeta queda muy baja, el contenido
-            // se desliza en vez de recortarse.
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        RobotPreview(color = character.color, modifier = Modifier.size(if (isTablet) 80.dp else 60.dp))
+        RobotPreview(
+            color = character.color,
+            modifier = Modifier
+                .size(if (isTablet) 80.dp else 60.dp)
+                .clickable { onZoomClick() }
+        )
         Spacer(Modifier.height(8.dp))
         Text(
             text = character.name,

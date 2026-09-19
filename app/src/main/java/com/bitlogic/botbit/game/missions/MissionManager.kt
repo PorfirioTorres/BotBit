@@ -13,7 +13,7 @@ class MissionManager(
     val missions: StateFlow<List<MissionProgress>> = _missions.asStateFlow()
 
     private var missionCounter = 0
-
+¿
     init {
         loadMissions()
     }

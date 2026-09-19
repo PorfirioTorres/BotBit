@@ -1,4 +1,4 @@
-package com.bitlogic.botbit.ui.inventory
+    package com.bitlogic.botbit.ui.inventory
 
 import androidx.lifecycle.ViewModel
 import com.bitlogic.botbit.data.CharacterData

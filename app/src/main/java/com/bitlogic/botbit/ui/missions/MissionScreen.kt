@@ -105,8 +105,7 @@ fun MissionScreen(
                                 if (dismissValue == SwipeToDismissBoxValue.EndToStart || 
                                     dismissValue == SwipeToDismissBoxValue.StartToEnd) {
                                     // ELIMINAR MISIÓN CON SWIPE
-                                    missionManager.deleteMission(mission.mission.id)
-                                    true
+                                    missionManager.deleteMission(mission.mission.id)true
                                 } else {
                                     false
                                 }
