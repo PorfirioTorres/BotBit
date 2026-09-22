@@ -21,6 +21,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.bitlogic.botbit.R
+
 
 @Composable
 fun MenuScreen(
@@ -61,23 +65,11 @@ fun MenuScreen(
 
 @Composable
 fun LogoBotBit(modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-        val r = size.minDimension / 2f - 6f
-        val c = Offset(size.width / 2f, size.height / 2f)
-        drawCircle(Palette.Surface, r, c)
-        drawArc(
-            color = Palette.Yellow,
-            startAngle = 180f,
-            sweepAngle = 180f,
-            useCenter = true,
-            topLeft = Offset(c.x - r, c.y - r),
-            size = Size(r * 2, r * 2)
-        )
-        drawLine(Palette.Ink, Offset(c.x - r, c.y), Offset(c.x + r, c.y), strokeWidth = 9f)
-        drawCircle(Palette.Ink, r, c, style = Stroke(9f))
-        drawCircle(Palette.Surface, r * 0.24f, c)
-        drawCircle(Palette.Ink, r * 0.24f, c, style = Stroke(9f))
-    }
+    Image(
+        painter = painterResource(R.drawable.robot),
+        contentDescription = "BotBit",
+        modifier = modifier
+    )
 }
 
 // ============ PORTRAIT (Vertical) ============
