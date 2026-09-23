@@ -6,7 +6,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,14 +21,17 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.bitlogic.botbit.R
+
 
 @Composable
 fun MenuScreen(
-    bestScore: Int,
     onPlay: () -> Unit,
-    onEndless: () -> Unit,
     onInventory: () -> Unit,
     onMissions: () -> Unit,
+    onTerms: () -> Unit,
     onExit: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
@@ -34,27 +40,24 @@ fun MenuScreen(
 
     when {
         isTablet -> TabletMenuScreen(
-            bestScore = bestScore,
             onPlay = onPlay,
-            onEndless = onEndless,
             onInventory = onInventory,
             onMissions = onMissions,
+            onTerms = onTerms,
             onExit = onExit
         )
         isLandscape -> LandscapeMenuScreen(
-            bestScore = bestScore,
             onPlay = onPlay,
-            onEndless = onEndless,
             onInventory = onInventory,
             onMissions = onMissions,
+            onTerms = onTerms,
             onExit = onExit
         )
         else -> PortraitMenuScreen(
-            bestScore = bestScore,
             onPlay = onPlay,
-            onEndless = onEndless,
             onInventory = onInventory,
             onMissions = onMissions,
+            onTerms = onTerms,
             onExit = onExit
         )
     }
@@ -62,33 +65,20 @@ fun MenuScreen(
 
 @Composable
 fun LogoBotBit(modifier: Modifier = Modifier) {
-    Canvas(modifier) {
-        val r = size.minDimension / 2f - 6f
-        val c = Offset(size.width / 2f, size.height / 2f)
-        drawCircle(Palette.Surface, r, c)
-        drawArc(
-            color = Palette.Yellow,
-            startAngle = 180f,
-            sweepAngle = 180f,
-            useCenter = true,
-            topLeft = Offset(c.x - r, c.y - r),
-            size = Size(r * 2, r * 2)
-        )
-        drawLine(Palette.Ink, Offset(c.x - r, c.y), Offset(c.x + r, c.y), strokeWidth = 9f)
-        drawCircle(Palette.Ink, r, c, style = Stroke(9f))
-        drawCircle(Palette.Surface, r * 0.24f, c)
-        drawCircle(Palette.Ink, r * 0.24f, c, style = Stroke(9f))
-    }
+    Image(
+        painter = painterResource(R.drawable.robot),
+        contentDescription = "BotBit",
+        modifier = modifier
+    )
 }
 
 // ============ PORTRAIT (Vertical) ============
 @Composable
 private fun PortraitMenuScreen(
-    bestScore: Int,
     onPlay: () -> Unit,
-    onEndless: () -> Unit,
     onInventory: () -> Unit,
     onMissions: () -> Unit,
+    onTerms: () -> Unit,
     onExit: () -> Unit
 ) {
     Column(
@@ -117,33 +107,17 @@ private fun PortraitMenuScreen(
         // Botones en columna
         PokeButton("JUGAR", primary = true, onClick = onPlay)
         Spacer(Modifier.height(10.dp))
-        PokeButton("MODO INFINITO", primary = false, onClick = onEndless)
+        PokeButton("PERSONAJES", primary = false, onClick = onInventory)
         Spacer(Modifier.height(10.dp))
         PokeButton("MISIONES", primary = false, onClick = onMissions)
         Spacer(Modifier.height(10.dp))
-        PokeButton("PERSONAJES", primary = false, onClick = onInventory)
+        TextButton(onClick = onTerms) {
+            Text("Términos y Condiciones", color = Palette.Blue, fontWeight = FontWeight.Bold)
+        }
         Spacer(Modifier.height(10.dp))
         PokeButton("SALIR", primary = false, onClick = onExit)
 
         Spacer(Modifier.weight(1f))
-
-        // Puntuación
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(Palette.Surface)
-                .border(2.dp, Palette.Track, RoundedCornerShape(20.dp))
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = "Mejor puntuación: $bestScore",
-                color = Palette.Blue,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(Modifier.height(10.dp))
 
         Text(
             text = "v1.0 · BITLOGIC STUDIO",
@@ -151,18 +125,16 @@ private fun PortraitMenuScreen(
             fontSize = 10.sp
         )
 
-        Spacer(Modifier.height(16.dp))
-    }
+        Spacer(Modifier.height(16.dp))    }
 }
 
 // ============ LANDSCAPE (Horizontal) ============
 @Composable
 private fun LandscapeMenuScreen(
-    bestScore: Int,
     onPlay: () -> Unit,
-    onEndless: () -> Unit,
     onInventory: () -> Unit,
     onMissions: () -> Unit,
+    onTerms: () -> Unit,
     onExit: () -> Unit
 ) {
     Row(
@@ -186,6 +158,9 @@ private fun LandscapeMenuScreen(
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Black
             )
+            TextButton(onClick = onTerms) {
+                Text("Términos", color = Palette.Blue, fontSize = 12.sp)
+            }
         }
 
         // Columna derecha: Botones (2 columnas)
@@ -197,29 +172,12 @@ private fun LandscapeMenuScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     PokeButton("JUGAR", primary = true, onClick = onPlay)
                     Spacer(Modifier.height(8.dp))
-                    PokeButton("MODO INFINITO", primary = false, onClick = onEndless)
-                    Spacer(Modifier.height(8.dp))
                     PokeButton("MISIONES", primary = false, onClick = onMissions)
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     PokeButton("PERSONAJES", primary = false, onClick = onInventory)
                     Spacer(Modifier.height(8.dp))
                     PokeButton("SALIR", primary = false, onClick = onExit)
-                    Spacer(Modifier.height(8.dp))
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Palette.Surface)
-                            .border(2.dp, Palette.Track, RoundedCornerShape(20.dp))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = "🏆 $bestScore",
-                            color = Palette.Blue,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
             }
         }
@@ -229,11 +187,10 @@ private fun LandscapeMenuScreen(
 // ============ TABLET ============
 @Composable
 private fun TabletMenuScreen(
-    bestScore: Int,
     onPlay: () -> Unit,
-    onEndless: () -> Unit,
     onInventory: () -> Unit,
     onMissions: () -> Unit,
+    onTerms: () -> Unit,
     onExit: () -> Unit
 ) {
     Row(
@@ -258,6 +215,10 @@ private fun TabletMenuScreen(
                 fontSize = 52.sp,
                 fontWeight = FontWeight.Black
             )
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onTerms) {
+                Text("Términos y Condiciones", color = Palette.Blue, fontSize = 14.sp)
+            }
         }
 
         // Botones en 2 columnas con más espacio
@@ -272,29 +233,12 @@ private fun TabletMenuScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     PokeButton("JUGAR", primary = true, onClick = onPlay)
                     Spacer(Modifier.height(12.dp))
-                    PokeButton("MODO INFINITO", primary = false, onClick = onEndless)
-                    Spacer(Modifier.height(12.dp))
                     PokeButton("MISIONES", primary = false, onClick = onMissions)
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     PokeButton("PERSONAJES", primary = false, onClick = onInventory)
                     Spacer(Modifier.height(12.dp))
                     PokeButton("SALIR", primary = false, onClick = onExit)
-                    Spacer(Modifier.height(12.dp))
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Palette.Surface)
-                            .border(2.dp, Palette.Track, RoundedCornerShape(20.dp))
-                            .padding(horizontal = 20.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = "🏆 Mejor puntuación: $bestScore",
-                            color = Palette.Blue,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
             }
         }

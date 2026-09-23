@@ -5,7 +5,7 @@
     <application
         android:name=".MainApplication"
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/botbitlogo"
         android:label="BotBit"
         android:supportsRtl="true"
         android:theme="@style/Theme.Botbit">

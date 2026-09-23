@@ -26,6 +26,14 @@ class ProgressStore(context: Context) {
         }
     }
 
+    fun bestScoreForLevel(levelId: String): Int = prefs.getInt("best_$levelId", 0)
+
+    fun saveBestScoreForLevel(levelId: String, score: Int) {
+        if (score > bestScoreForLevel(levelId)) {
+            prefs.edit().putInt("best_$levelId", score).apply()
+        }
+    }
+
     fun getSelectedCharacter(): String {
         return prefs.getString("selected_character", "classic") ?: "classic"
     }
