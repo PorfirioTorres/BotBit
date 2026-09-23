@@ -24,6 +24,9 @@ class InventoryViewModel @Inject constructor(
     
     private val _selectedCharacter = MutableStateFlow(store.getSelectedCharacter())
     val selectedCharacter: StateFlow<String> = _selectedCharacter.asStateFlow()
+
+    private val _totalCoins = MutableStateFlow(store.totalCoins)
+    val totalCoins: StateFlow<Int> = _totalCoins.asStateFlow()
     
     private val _selectionConfirmed = MutableStateFlow(false)
     val selectionConfirmed: StateFlow<Boolean> = _selectionConfirmed.asStateFlow()
@@ -53,15 +56,21 @@ class InventoryViewModel @Inject constructor(
     fun buyCharacter(characterId: String) {
         val character = characters.value.find { it.id == characterId }
         if (character != null && character.locked) {
-            // Desbloquear en store
-            store.unlockCharacter(characterId)
-            
-            // Actualizar lista
-            _characters.value = _characters.value.map {
-                if (it.id == characterId) {
-                    it.copy(locked = false)
-                } else {
-                    it
+            // Cobrar monedas reales del monedero global
+            if (store.spendCoins(character.price)) {
+                // Actualizar el estado del saldo para la UI
+                _totalCoins.value = store.totalCoins
+                
+                // Desbloquear en store
+                store.unlockCharacter(characterId)
+
+                // Actualizar lista de personajes (quitar candado)
+                _characters.value = _characters.value.map {
+                    if (it.id == characterId) {
+                        it.copy(locked = false)
+                    } else {
+                        it
+                    }
                 }
             }
         }

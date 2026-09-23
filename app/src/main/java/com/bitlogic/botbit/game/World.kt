@@ -206,6 +206,9 @@ class World(
                         }
                     }
                 }
+                ObstacleType.CHECKPOINT -> {
+                    // El runner ignora los checkpoints de la torre
+                }
             }
         }
 

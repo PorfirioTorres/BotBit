@@ -8,9 +8,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
+import com.bitlogic.botbit.game.ArenaWorld
 import com.bitlogic.botbit.game.GameConfig
 import com.bitlogic.botbit.game.ObstacleType
 import com.bitlogic.botbit.game.World
+import com.bitlogic.botbit.game.TowerWorld
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -78,7 +80,7 @@ fun DrawScope.drawWorld(
                 )
             }
 
-            ObstacleType.BLOCK -> {
+            ObstacleType.BLOCK, ObstacleType.RECTANGLE -> {
                 val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
                 val boxSize = Size(ob.w * tile, ob.h * tile)
                 val radius = CornerRadius(tile * 0.12f, tile * 0.12f)
@@ -102,8 +104,8 @@ fun DrawScope.drawWorld(
             ObstacleType.COIN -> {
                 if (!ob.collected) {
                     val phase = t * 3.4f + ob.x * 0.7f
-                    val spin = abs(cos(phase)).coerceAtLeast(0.14f)
-                    val bob = sin(phase * 0.75f) * tile * 0.10f
+                    val spin = abs(cos(phase)).coerceAtLeast(0.14f).toFloat()
+                    val bob = sin(phase * 0.75f).toFloat() * tile * 0.10f
                     val cx = sx(ob.x + ob.w / 2f)
                     val cy = sy(ob.y + ob.h / 2f) + bob
                     val r = ob.w * tile / 2f
@@ -153,33 +155,230 @@ fun DrawScope.drawWorld(
         val squashY = 1f - world.landImpact * 0.26f
         val squashX = 1f / squashY
         scale(squashX, squashY, pivot = Offset(cx, top + s)) {
-            drawRobot(world, theme, left, top, s, stroke, t, scratch)
+            drawRobot(
+                color = world.characterColor,
+                onGround = p.onGround,
+                vy = p.vy,
+                rotation = p.rotation,
+                left = left,
+                top = top,
+                s = s,
+                stroke = stroke,
+                t = t,
+                theme = theme,
+                scratch = scratch
+            )
         }
     } else {
         // En el aire: gira, y se estira un poco segun la velocidad vertical.
         val stretch = 1f + (p.vy / GameConfig.JUMP_VELOCITY).coerceIn(-1f, 1f) * 0.10f
         rotate(degrees = p.rotation, pivot = Offset(cx, cy)) {
             scale(1f / stretch, stretch, pivot = Offset(cx, cy)) {
-                drawRobot(world, theme, left, top, s, stroke, t, scratch)
+                drawRobot(
+                    color = world.characterColor,
+                    onGround = p.onGround,
+                    vy = p.vy,
+                    rotation = p.rotation,
+                    left = left,
+                    top = top,
+                    s = s,
+                    stroke = stroke,
+                    t = t,
+                    theme = theme,
+                    scratch = scratch
+                )
             }
         }
     }
 }
 
+/**
+ * Dibuja el modo torre. La camara se centra en la sala actual.
+ */
+fun DrawScope.drawTowerWorld(
+    world: TowerWorld,
+    tilesVisibleX: Float = 12f,
+    theme: LevelTheme = LevelTheme.DEFAULT,
+    scratch: RenderScratch
+) {
+    val tile = size.width / tilesVisibleX
+    val roomHeightTiles = 15f
+    val roomBottomY = world.room * roomHeightTiles
+    val groundY = size.height 
+    val stroke = tile * 0.075f
+    val t = world.elapsed
+
+    fun sx(worldX: Float): Float = worldX * tile
+    fun sy(worldY: Float): Float = size.height - (worldY - roomBottomY) * tile
+
+    // ---- Fondo estatico con el color del cielo del tema ----
+    drawRect(theme.skyTop, Offset.Zero, size)
+
+    // ---- Plataformas y bloques ----
+    world.obstacles.forEach { ob ->
+        // Solo dibujar si esta cerca de la sala actual
+        if (ob.y + ob.h < roomBottomY - 2f || ob.y > roomBottomY + roomHeightTiles + 2f) return@forEach
+
+        when (ob.type) {
+            ObstacleType.BLOCK, ObstacleType.RECTANGLE -> {
+                val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
+                val boxSize = Size(ob.w * tile, ob.h * tile)
+                val radius = CornerRadius(tile * 0.12f, tile * 0.12f)
+                drawRoundRect(theme.blockFill, topLeft, boxSize, radius)
+                drawRoundRect(theme.obstacleEdge, topLeft, boxSize, radius, style = Stroke(stroke))
+            }
+            ObstacleType.PLATFORM -> {
+                val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
+                val boxSize = Size(ob.w * tile, ob.h * tile)
+                drawRect(theme.blockFill, topLeft, boxSize)
+                drawRect(theme.obstacleEdge, topLeft, Size(boxSize.width, stroke * 1.4f))
+                drawRect(theme.obstacleEdge, topLeft, boxSize, style = Stroke(stroke * 0.7f))
+            }
+            ObstacleType.CHECKPOINT -> {
+                val cx = sx(ob.x + ob.w / 2f)
+                val cy = sy(ob.y + ob.h / 2f)
+                val r = ob.w * tile / 2f
+                drawCircle(Palette.Purple.copy(alpha = 0.3f), r * 1.5f, Offset(cx, cy))
+                drawCircle(Palette.Purple, r, Offset(cx, cy))
+                drawCircle(Palette.Ink, r, Offset(cx, cy), style = Stroke(stroke))
+            }
+            else -> {}
+        }
+    }
+
+    // ---- Jugador (Robot) ----
+    val s = GameConfig.PLAYER_SIZE * tile
+    val left = sx(world.x)
+    val top = sy(world.y + GameConfig.PLAYER_SIZE)
+    val cx = left + s / 2f
+    val cy = top + s / 2f
+
+    // Barra de carga sobre el robot
+    if (world.charging) {
+        val barW = s * 1.2f
+        val barH = tile * 0.15f
+        val bx = cx - barW / 2f
+        val by = top - tile * 0.4f
+        drawRect(Palette.Ink, Offset(bx, by), Size(barW, barH))
+        drawRect(Palette.Yellow, Offset(bx, by), Size(barW * world.chargeRatio, barH))
+    }
+
+    rotate(degrees = world.rotation, pivot = Offset(cx, cy)) {
+        drawRobot(
+            color = Palette.DarkYellow, 
+            onGround = world.onGround,
+            vy = 0f, 
+            rotation = world.rotation,
+            left = left,
+            top = top,
+            s = s,
+            stroke = stroke,
+            t = t,
+            theme = theme,
+            scratch = scratch
+        )
+    }
+}
+
+/**
+ * Dibuja el modo Arena. La camara sigue al jugador.
+ */
+fun DrawScope.drawArenaWorld(
+    world: ArenaWorld,
+    theme: LevelTheme = LevelTheme.DEFAULT,
+    scratch: RenderScratch
+) {
+    val tile = size.width / 12f // 12 tiles de ancho visible
+    val stroke = tile * 0.075f
+    val t = world.elapsed
+
+    // La camara se centra en el jugador
+    val cx = size.width / 2f
+    val cy = size.height / 2f
+
+    fun sx(worldX: Float): Float = cx + (worldX - world.px) * tile
+    fun sy(worldY: Float): Float = cy + (worldY - world.py) * tile
+
+    // ---- Fondo (Suelo infinito simplificado) ----
+    drawRect(theme.groundFill, Offset.Zero, size)
+    
+    // Dibujar una rejilla simple para dar sensacion de movimiento
+    val gridStep = tile * 2f
+    val offsetX = (-(world.px * tile) % gridStep)
+    val offsetY = (-(world.py * tile) % gridStep)
+    
+    var gx = offsetX - gridStep
+    while (gx < size.width + gridStep) {
+        drawLine(theme.groundHatch.copy(alpha = 0.3f), Offset(gx, 0f), Offset(gx, size.height), strokeWidth = 1f)
+        gx += gridStep
+    }
+    var gy = offsetY - gridStep
+    while (gy < size.height + gridStep) {
+        drawLine(theme.groundHatch.copy(alpha = 0.3f), Offset(0f, gy), Offset(size.width, gy), strokeWidth = 1f)
+        gy += gridStep
+    }
+
+    // ---- Enemigos ----
+    world.enemies.forEach { e ->
+        if (!e.active) return@forEach
+        val ex = sx(e.x)
+        val ey = sy(e.y)
+        val s = tile * 0.8f
+        
+        // Solo dibujar si esta en pantalla
+        if (ex < -s || ex > size.width + s || ey < -s || ey > size.height + s) return@forEach
+        
+        drawRect(Palette.Red, Offset(ex - s/2, ey - s/2), Size(s, s))
+        drawRect(Palette.Ink, Offset(ex - s/2, ey - s/2), Size(s, s), style = Stroke(stroke))
+        
+        // Ojos de "virus"
+        drawCircle(Palette.Surface, tile * 0.1f, Offset(ex - s * 0.2f, ey - s * 0.1f))
+        drawCircle(Palette.Surface, tile * 0.1f, Offset(ex + s * 0.2f, ey - s * 0.1f))
+    }
+
+    // ---- Balas ----
+    world.bullets.forEach { b ->
+        if (!b.active) return@forEach
+        drawCircle(Palette.Yellow, tile * 0.15f, Offset(sx(b.x), sy(b.y)))
+        drawCircle(Palette.Ink, tile * 0.15f, Offset(sx(b.x), sy(b.y)), style = Stroke(1.5f))
+    }
+
+    // ---- Jugador (Robot) ----
+    val s = GameConfig.PLAYER_SIZE * tile
+    rotate(degrees = t * 45f, pivot = Offset(cx, cy)) { // Rotacion cosmética en Arena
+        drawRobot(
+            color = Palette.DarkYellow,
+            onGround = true,
+            vy = 0f,
+            rotation = 0f,
+            left = cx - s / 2f,
+            top = cy - s / 2f,
+            s = s,
+            stroke = stroke,
+            t = t,
+            theme = theme,
+            scratch = scratch
+        )
+    }
+}
+
 private fun DrawScope.drawRobot(
-    world: World,
-    theme: LevelTheme,
+    color: androidx.compose.ui.graphics.Color,
+    onGround: Boolean,
+    vy: Float,
+    rotation: Float,
     left: Float,
     top: Float,
     s: Float,
     stroke: Float,
     t: Float,
+    theme: LevelTheme,
     scratch: RenderScratch
 ) {
-    val robotColor = world.characterColor
+    val robotColor = color
 
     // Propulsor: solo en el aire, con parpadeo rapido
-    if (!world.player.onGround) {
+    if (!onGround) {
         val flame = 0.55f + 0.45f * sin(t * 38f)
         val fw = s * 0.34f
         val fh = s * 0.40f * flame

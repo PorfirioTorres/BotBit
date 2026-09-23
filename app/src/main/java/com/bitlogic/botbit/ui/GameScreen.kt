@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
+import com.bitlogic.botbit.data.ProgressStore
 import com.bitlogic.botbit.game.GameConfig
 import com.bitlogic.botbit.game.GameKind
 import com.bitlogic.botbit.game.GameMode
@@ -47,6 +48,7 @@ import com.bitlogic.botbit.game.LevelData
 import com.bitlogic.botbit.game.GameWorld
 import com.bitlogic.botbit.game.World
 import com.bitlogic.botbit.game.TowerWorld
+import com.bitlogic.botbit.game.ArenaWorld
 import com.bitlogic.botbit.game.missions.MissionManager
 import com.bitlogic.botbit.game.InputEvent
 
@@ -55,6 +57,7 @@ fun GameScreen(
     kind: GameKind = GameKind.RUNNER,
     mode: GameMode,
     level: LevelData?,
+    store: ProgressStore, // NUEVO
     bestScore: Int,
     selectedCharacter: String = "classic",
     missionManager: MissionManager? = null,
@@ -66,10 +69,10 @@ fun GameScreen(
     val tilesVisible = if (isTablet) 16f else GameConfig.TILES_VISIBLE_X
     
     val world: GameWorld = remember(kind, mode, level, missionManager, selectedCharacter, tilesVisible) {
-        if (kind == GameKind.TOWER) {
-            TowerWorld(level, selectedCharacter)
-        } else {
-            World(mode, level, missionManager, selectedCharacter, tilesVisible)
+        when (kind) {
+            GameKind.TOWER -> TowerWorld(level, store, selectedCharacter)
+            GameKind.ARENA -> ArenaWorld(selectedCharacter)
+            else -> World(mode, level, missionManager, selectedCharacter, tilesVisible)
         }
     }
 
@@ -141,6 +144,7 @@ fun GameScreen(
                 showProgress = (kind == GameKind.RUNNER && mode == GameMode.LEVEL),
                 score = hudScore,
                 coins = hudCoins,
+                isEndless = (mode == GameMode.ENDLESS),
                 paused = paused,
                 onTogglePause = { paused = !paused }
             )
@@ -159,11 +163,30 @@ fun GameScreen(
                             }
                         )
                     }
+                    .pointerInput(world) {
+                        // Soporte para movimiento continuo en Arena
+                        if (kind == GameKind.ARENA) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val position = event.changes.first().position
+                                    // Calcular direccion relativa al centro de la pantalla
+                                    val dx = (position.x - size.width / 2f) / (size.width / 2f)
+                                    val dy = (position.y - size.height / 2f) / (size.height / 2f)
+                                    world.onInput(InputEvent.Move(
+                                        dx.coerceIn(-1f, 1f), 
+                                        dy.coerceIn(-1f, 1f)
+                                    ))
+                                }
+                            }
+                        }
+                    }
             ) {
                 Canvas(Modifier.fillMaxSize()) {
                     frame.value
-                    if (world is World) {
-                        drawWorld(world, tilesVisible, theme, scratch)
+                    when (world) {
+                        is World -> drawWorld(world, tilesVisible, theme, scratch)
+                        is TowerWorld -> drawTowerWorld(world, tilesVisible, theme, scratch)
                     }
                 }
 
@@ -179,6 +202,7 @@ fun GameScreen(
                 score = hudScore,
                 bestScore = bestScore,
                 coins = hudCoins,
+                isEndless = (mode == GameMode.ENDLESS),
                 primaryLabel = "CONTINUAR",
                 onPrimary = { paused = false },
                 onMenu = onMenu
@@ -191,6 +215,7 @@ fun GameScreen(
                 score = finalScore,
                 bestScore = maxOf(bestScore, finalScore),
                 coins = world.coins,
+                isEndless = (mode == GameMode.ENDLESS),
                 primaryLabel = "REINTENTAR",
                 onPrimary = {
                     world.retry()
@@ -210,6 +235,7 @@ private fun Hud(
     showProgress: Boolean,
     score: Int,
     coins: Int,
+    isEndless: Boolean = false,
     paused: Boolean,
     onTogglePause: () -> Unit
 ) {
@@ -267,17 +293,26 @@ private fun Hud(
             )
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                repeat(3) { index ->
-                    Canvas(Modifier.size(16.dp).padding(end = 0.dp)) {
-                        val r = size.minDimension / 2f
-                        val c = Offset(size.width / 2f, size.height / 2f)
-                        drawCircle(
-                            if (index < coins) Palette.Yellow else Palette.Track,
-                            r, c
-                        )
-                        drawCircle(Palette.Ink, r, c, style = Stroke(1.6f))
+                if (isEndless) {
+                    Text(
+                        text = "x $coins",
+                        color = Palette.Ink,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                } else {
+                    repeat(3) { index ->
+                        Canvas(Modifier.size(16.dp).padding(end = 0.dp)) {
+                            val r = size.minDimension / 2f
+                            val c = Offset(size.width / 2f, size.height / 2f)
+                            drawCircle(
+                                if (index < coins) Palette.Yellow else Palette.Track,
+                                r, c
+                            )
+                            drawCircle(Palette.Ink, r, c, style = Stroke(1.6f))
+                        }
+                        Spacer(Modifier.width(6.dp))
                     }
-                    Spacer(Modifier.width(6.dp))
                 }
                 Spacer(Modifier.width(4.dp))
                 Box(

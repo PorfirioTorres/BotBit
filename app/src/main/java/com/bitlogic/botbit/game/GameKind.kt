@@ -31,7 +31,7 @@ enum class GameKind(
         tagline = "Sube sin caerte",
         description = "Manten presionado para cargar el salto y sueltalo para " +
                 "brincar. No hay muerte: si caes, pierdes altura.",
-        available = false,
+        available = true,
         prefersPortrait = true
     ),
 

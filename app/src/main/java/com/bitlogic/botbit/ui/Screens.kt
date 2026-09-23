@@ -22,12 +22,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Canvas
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.bitlogic.botbit.data.CharacterData
 import com.bitlogic.botbit.ui.inventory.InventoryViewModel
@@ -39,7 +41,8 @@ fun ScreenInventory(
 ) {
     val characters by viewModel.characters.collectAsState()
     val selectedId by viewModel.selectedCharacter.collectAsState()
-    
+    val totalCoins by viewModel.totalCoins.collectAsState()
+
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp >= 600
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -79,7 +82,27 @@ fun ScreenInventory(
                 fontWeight = FontWeight.Black,
                 color = Palette.Black
             )
-            Spacer(Modifier.size(40.dp))
+            // Mostrar saldo global en la parte superior derecha
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Palette.YellowBg)
+                    .border(1.5.dp, Palette.DarkYellow, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Canvas(Modifier.size(14.dp)) {
+                    drawCircle(Palette.Yellow)
+                    drawCircle(Palette.Ink, style = Stroke(1.5f))
+                }
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = totalCoins.toString(),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Palette.Ink
+                )
+            }
         }
 
         Spacer(Modifier.height(12.dp))
@@ -120,6 +143,7 @@ fun ScreenInventory(
                             SlotCard(
                                 character = character,
                                 isSelected = character.id == selectedId,
+                                canAfford = totalCoins >= character.price,
                                 onSelect = { viewModel.selectCharacter(it) },
                                 onBuy = { viewModel.buyCharacter(it) },
                                 isTablet = isTablet
@@ -274,6 +298,7 @@ fun RobotPreview(color: Color, modifier: Modifier = Modifier.size(60.dp), boxHei
 fun SlotCard(
     character: CharacterData,
     isSelected: Boolean,
+    canAfford: Boolean = true,
     onSelect: (String) -> Unit,
     onBuy: (String) -> Unit,
     isTablet: Boolean = false
@@ -312,14 +337,18 @@ fun SlotCard(
             if (character.locked) {
                 Button(
                     onClick = { onBuy(character.id) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Palette.Yellow),
+                    enabled = canAfford,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (canAfford) Palette.Yellow else Palette.Track,
+                        disabledContainerColor = Palette.LightGrey
+                    ),
                     modifier = Modifier.height(if (isTablet) 30.dp else 24.dp).padding(horizontal = 8.dp)
                 ) {
                     Text(
-                        text = "MONEDA ${character.price}",
+                        text = "${character.price}",
                         fontSize = if (isTablet) 12.sp else 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Palette.Black
+                        color = if (canAfford) Palette.Black else Palette.Muted
                     )
                 }
             }
@@ -394,6 +423,7 @@ fun ResultPanel(
     score: Int,
     bestScore: Int,
     coins: Int,
+    isEndless: Boolean = false,
     primaryLabel: String,
     onPrimary: () -> Unit,
     onMenu: () -> Unit
@@ -443,7 +473,11 @@ fun ResultPanel(
             Spacer(Modifier.height(10.dp))
             SummaryRow("Mejor puntuacion", bestScore.toString(), Palette.Blue)
             Spacer(Modifier.height(10.dp))
-            SummaryRow("Monedas recogidas", "$coins / 3", Palette.Ink)
+            SummaryRow(
+                "Monedas recogidas", 
+                if (isEndless) coins.toString() else "$coins / 3", 
+                Palette.Ink
+            )
         }
 
         Spacer(Modifier.height(28.dp))

@@ -7,8 +7,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -69,6 +74,10 @@ class MainActivity : ComponentActivity() {
                 runCatching { LevelLoader.fromAssets(this, "levels/$file") }.getOrNull()
             }
         }
+
+        val towerLevel = remember {
+            runCatching { LevelLoader.fromAssets(this, "levels/tower_map.json") }.getOrNull()
+        }
         
         var screen by remember { mutableStateOf<Screen>(Screen.Menu) }
         var best by remember { mutableIntStateOf(store.bestScore) }
@@ -97,6 +106,7 @@ class MainActivity : ComponentActivity() {
                         onInventory = { screen = Screen.Inventory },
                         onMissions = { screen = Screen.Missions },
                         onTerms = { screen = Screen.Terms },
+                        onSettings = { screen = Screen.Settings },
                         onExit = { finish() }
                     )
 
@@ -104,6 +114,8 @@ class MainActivity : ComponentActivity() {
                         onSelect = { kind, mode ->
                             screen = if (kind == GameKind.RUNNER && mode == GameMode.LEVEL) {
                                 Screen.LevelSelect
+                            } else if (kind == GameKind.TOWER) {
+                                Screen.Playing(kind, mode, towerLevel)
                             } else {
                                 Screen.Playing(kind, mode, null)
                             }
@@ -134,15 +146,28 @@ class MainActivity : ComponentActivity() {
                         onBack = { screen = Screen.Menu }
                     )
 
+                    is Screen.Settings -> Box(Modifier.fillMaxSize()) {
+                        Text("Pantalla de Ajustes - Próximamente", Modifier.align(Alignment.Center))
+                        Button(onClick = { screen = Screen.Menu }, Modifier.align(Alignment.BottomCenter).padding(32.dp)) {
+                            Text("Volver")
+                        }
+                    }
+
                     is Screen.Playing -> GameScreen(
                         kind = current.kind,
                         mode = current.mode,
                         level = current.level,
+                        store = store, // NUEVO
                         bestScore = best,
                         selectedCharacter = selectedCharacter,
                         missionManager = missionManager,
                         onRunFinished = { score, coins, completed ->
                             AnalyticsHelper.logGameOver(score, coins, if (completed) "completed" else "dead")
+                            
+                            // 1. Sumar monedas al monedero global (independiente del modo)
+                            store.addCoins(coins)
+                            
+                            // 2. Guardar mejor puntaje por tipo de juego
                             store.saveBestScore(current.kind, score)
                             val played = current.level
                             if (played != null) {
@@ -168,6 +193,7 @@ class MainActivity : ComponentActivity() {
         object ModeSelect : Screen
         object LevelSelect : Screen
         object Terms : Screen
+        object Settings : Screen
         class Playing(val kind: GameKind, val mode: GameMode, val level: LevelData?) : Screen
     }
 }

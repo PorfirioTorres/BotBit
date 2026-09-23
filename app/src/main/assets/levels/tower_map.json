@@ -1,0 +1,25 @@
+{
+  "id": "la_gran_torre",
+  "name": "LA GRAN TORRE",
+  "theme": "cueva",
+  "length": 0,
+  "scrollSpeed": 0,
+  "gaps": [],
+  "obstacles": [
+    { "type": "BLOCK", "x": 0, "y": -1, "w": 12, "h": 1 },
+    { "type": "BLOCK", "x": 0, "y": 0, "w": 1, "h": 100 },
+    { "type": "BLOCK", "x": 11, "y": 0, "w": 1, "h": 100 },
+
+    { "type": "PLATFORM", "x": 3, "y": 3, "w": 3, "h": 0.5 },
+    { "type": "CHECKPOINT", "x": 4.2, "y": 3.5, "w": 0.6, "h": 0.6 },
+
+    { "type": "PLATFORM", "x": 7, "y": 6, "w": 3, "h": 0.5 },
+    { "type": "PLATFORM", "x": 2, "y": 9, "w": 4, "h": 0.5 },
+    { "type": "PLATFORM", "x": 6, "y": 12, "w": 3, "h": 0.5 },
+
+    { "type": "PLATFORM", "x": 4, "y": 16, "w": 4, "h": 0.5 },
+    { "type": "PLATFORM", "x": 1, "y": 19, "w": 3, "h": 0.5 },
+    { "type": "PLATFORM", "x": 8, "y": 22, "w": 3, "h": 0.5 },
+    { "type": "PLATFORM", "x": 3, "y": 25, "w": 5, "h": 0.5 }
+  ]
+}

@@ -43,7 +43,10 @@ enum class ObstacleType {
     PLATFORM,
 
     /** Coleccionable. No mata, suma puntos. */
-    COIN
+    COIN,
+
+    /** Punto de guardado en la torre. */
+    CHECKPOINT
 
 
 }

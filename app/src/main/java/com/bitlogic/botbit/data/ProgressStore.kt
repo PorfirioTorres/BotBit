@@ -11,6 +11,27 @@ class ProgressStore(context: Context) {
         get() = prefs.getInt(KEY_BEST, 0)
         set(value) { prefs.edit().putInt(KEY_BEST, value).apply() }
 
+    /** Saldo acumulado de todas las partidas. Se usa para comprar personajes. */
+    var totalCoins: Int
+        get() = prefs.getInt(KEY_TOTAL_COINS, 0)
+        private set(value) { prefs.edit().putInt(KEY_TOTAL_COINS, value).apply() }
+
+    /** Suma monedas al monedero global. */
+    fun addCoins(amount: Int) {
+        if (amount > 0) {
+            totalCoins += amount
+        }
+    }
+
+    /** Resta monedas al monedero global (para compras). Retorna true si hubo saldo. */
+    fun spendCoins(amount: Int): Boolean {
+        val current = totalCoins
+        return if (current >= amount) {
+            totalCoins = current - amount
+            true
+        } else false
+    }
+
     fun isLevelCompleted(levelId: String): Boolean =
         prefs.getBoolean("done_$levelId", false)
 
@@ -70,7 +91,29 @@ class ProgressStore(context: Context) {
         }
     }
 
+    // ---- Checkpoints de la Torre ----
+    fun saveTowerCheckpoint(room: Int, x: Float, y: Float) {
+        prefs.edit()
+            .putInt("tower_room", room)
+            .putFloat("tower_x", x)
+            .putFloat("tower_y", y)
+            .apply()
+    }
+
+    fun getTowerCheckpoint(): Triple<Int, Float, Float> {
+        return Triple(
+            prefs.getInt("tower_room", 0),
+            prefs.getFloat("tower_x", 5f),
+            prefs.getFloat("tower_y", 0f)
+        )
+    }
+
+    fun clearTowerCheckpoint() {
+        prefs.edit().remove("tower_room").remove("tower_x").remove("tower_y").apply()
+    }
+
     companion object {
         private const val KEY_BEST = "best_score"
+        private const val KEY_TOTAL_COINS = "total_coins"
     }
 }

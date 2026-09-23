@@ -34,6 +34,7 @@ fun MenuScreen(
     onInventory: () -> Unit,
     onMissions: () -> Unit,
     onTerms: () -> Unit,
+    onSettings: () -> Unit,
     onExit: () -> Unit
 ) {
     val configuration = LocalConfiguration.current
@@ -46,6 +47,7 @@ fun MenuScreen(
             onInventory = onInventory,
             onMissions = onMissions,
             onTerms = onTerms,
+            onSettings = onSettings,
             onExit = onExit
         )
         isLandscape -> LandscapeMenuScreen(
@@ -53,6 +55,7 @@ fun MenuScreen(
             onInventory = onInventory,
             onMissions = onMissions,
             onTerms = onTerms,
+            onSettings = onSettings,
             onExit = onExit
         )
         else -> PortraitMenuScreen(
@@ -60,6 +63,7 @@ fun MenuScreen(
             onInventory = onInventory,
             onMissions = onMissions,
             onTerms = onTerms,
+            onSettings = onSettings,
             onExit = onExit
         )
     }
@@ -81,6 +85,7 @@ private fun PortraitMenuScreen(
     onInventory: () -> Unit,
     onMissions: () -> Unit,
     onTerms: () -> Unit,
+    onSettings: () -> Unit,
     onExit: () -> Unit
 ) {
     Column(
@@ -113,9 +118,7 @@ private fun PortraitMenuScreen(
         Spacer(Modifier.height(10.dp))
         PokeButton("MISIONES", primary = false, onClick = onMissions)
         Spacer(Modifier.height(10.dp))
-        TextButton(onClick = onTerms) {
-            Text("Términos y Condiciones", color = Palette.Blue, fontWeight = FontWeight.Bold)
-        }
+        PokeButton("AJUSTES", primary = false, onClick = onSettings)
         Spacer(Modifier.height(10.dp))
         PokeButton("SALIR", primary = false, onClick = onExit)
 
@@ -141,6 +144,7 @@ private fun LandscapeMenuScreen(
     onInventory: () -> Unit,
     onMissions: () -> Unit,
     onTerms: () -> Unit,
+    onSettings: () -> Unit,
     onExit: () -> Unit
 ) {
     Row(
@@ -178,10 +182,12 @@ private fun LandscapeMenuScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     PokeButton("JUGAR", primary = true, onClick = onPlay)
                     Spacer(Modifier.height(8.dp))
+                    PokeButton("PERSONAJES", primary = false, onClick = onInventory)
+                    Spacer(Modifier.height(8.dp))
                     PokeButton("MISIONES", primary = false, onClick = onMissions)
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    PokeButton("PERSONAJES", primary = false, onClick = onInventory)
+                    PokeButton("AJUSTES", primary = false, onClick = onSettings)
                     Spacer(Modifier.height(8.dp))
                     PokeButton("SALIR", primary = false, onClick = onExit)
                 }
@@ -197,6 +203,7 @@ private fun TabletMenuScreen(
     onInventory: () -> Unit,
     onMissions: () -> Unit,
     onTerms: () -> Unit,
+    onSettings: () -> Unit,
     onExit: () -> Unit
 ) {
     Row(
@@ -239,10 +246,12 @@ private fun TabletMenuScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     PokeButton("JUGAR", primary = true, onClick = onPlay)
                     Spacer(Modifier.height(12.dp))
+                    PokeButton("PERSONAJES", primary = false, onClick = onInventory)
+                    Spacer(Modifier.height(12.dp))
                     PokeButton("MISIONES", primary = false, onClick = onMissions)
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    PokeButton("PERSONAJES", primary = false, onClick = onInventory)
+                    PokeButton("AJUSTES", primary = false, onClick = onSettings)
                     Spacer(Modifier.height(12.dp))
                     PokeButton("SALIR", primary = false, onClick = onExit)
                 }
