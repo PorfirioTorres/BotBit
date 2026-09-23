@@ -35,6 +35,12 @@ interface GameWorld {
     /** Reloj de animacion en segundos, avanzado con el paso fijo. */
     val elapsed: Float
 
+    /** Monedas recolectadas en la partida actual. */
+    val coins: Int
+
+    /** Numero de reintentos desde que se entro a la pantalla. */
+    val attempts: Int
+
     /** Avanza la simulacion un paso fijo. */
     fun update(dt: Float)
 

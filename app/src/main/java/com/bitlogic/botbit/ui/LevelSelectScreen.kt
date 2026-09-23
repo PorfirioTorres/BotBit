@@ -25,16 +25,13 @@ import com.bitlogic.botbit.game.LevelData
 
 /**
  * Selector de nivel con desbloqueo progresivo.
- *
- * Un nivel se abre cuando el anterior fue completado. El primero siempre esta
- * abierto. Sin esto los niveles 2 y 3 existian en assets pero nunca se podian
- * jugar: MainActivity solo cargaba level_01.
  */
 @Composable
 fun LevelSelectScreen(
     levels: List<LevelData>,
     isUnlocked: (index: Int) -> Boolean,
     coinsFor: (LevelData) -> Int,
+    bestScoreFor: (LevelData) -> Int,
     isCompleted: (LevelData) -> Boolean,
     onSelect: (LevelData) -> Unit,
     onBack: () -> Unit
@@ -78,6 +75,7 @@ fun LevelSelectScreen(
                         index = i,
                         unlocked = isUnlocked(i),
                         coins = coinsFor(lv),
+                        bestScore = bestScoreFor(lv),
                         completed = isCompleted(lv),
                         compact = true,
                         onSelect = onSelect,
@@ -97,6 +95,7 @@ fun LevelSelectScreen(
                         index = i,
                         unlocked = isUnlocked(i),
                         coins = coinsFor(lv),
+                        bestScore = bestScoreFor(lv),
                         completed = isCompleted(lv),
                         compact = false,
                         onSelect = onSelect,
@@ -115,6 +114,7 @@ private fun LevelCard(
     index: Int,
     unlocked: Boolean,
     coins: Int,
+    bestScore: Int,
     completed: Boolean,
     compact: Boolean,
     onSelect: (LevelData) -> Unit,
@@ -122,8 +122,6 @@ private fun LevelCard(
 ) {
     val shape = RoundedCornerShape(18.dp)
     val theme = LevelTheme.byId(level.theme)
-
-    // Igual que en ModeSelectScreen: se llama siempre, se aplica solo en horizontal.
     val cardScroll = rememberScrollState()
 
     Column(
@@ -137,10 +135,8 @@ private fun LevelCard(
             )
             .then(if (unlocked) Modifier.clickable { onSelect(level) } else Modifier)
             .padding(14.dp)
-            // Ver nota en ModeSelectScreen: nunca dos scrolls verticales anidados.
             .then(if (compact) Modifier.verticalScroll(cardScroll) else Modifier)
     ) {
-        // Franja con los colores del tema: identifica el nivel de un vistazo
         Row(
             Modifier
                 .fillMaxWidth()
@@ -148,12 +144,7 @@ private fun LevelCard(
                 .clip(RoundedCornerShape(5.dp))
         ) {
             listOf(theme.skyTop, theme.near, theme.groundTop, theme.groundFill).forEach { c ->
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .background(if (unlocked) c else Palette.Track)
-                )
+                Box(Modifier.weight(1f).fillMaxHeight().background(if (unlocked) c else Palette.Track))
             }
         }
 
@@ -174,6 +165,12 @@ private fun LevelCard(
                 fontSize = if (compact) 11.sp else 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = Palette.Blue
+            )
+            Text(
+                text = "Mejor: $bestScore pts",
+                fontSize = if (compact) 10.sp else 12.sp,
+                color = Palette.Ink,
+                fontWeight = FontWeight.Bold
             )
             Text(
                 text = "${level.obstacles.size} obstáculos · velocidad ${level.scrollSpeed}",

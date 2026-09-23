@@ -30,6 +30,7 @@ enum class GameKind(
         title = "LA TORRE",
         tagline = "Sube sin caerte",
         description = "Manten presionado para cargar el salto y sueltalo para " +
+                "brincar. No hay muerte: si caes, pierdes altura.",
         available = false,
         prefersPortrait = true
     ),

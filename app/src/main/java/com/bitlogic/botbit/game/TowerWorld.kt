@@ -49,6 +49,8 @@ class TowerWorld(
     override val score: Int get() = 0          // TODO: altura maxima alcanzada
     override val progress: Float get() = 0f    // TODO: sala actual / salas totales
     override val title: String get() = level?.name ?: "LA TORRE"
+    override val coins: Int get() = 0
+    override val attempts: Int get() = 1
 
     // --- Estado del jugador ---
     var x = 0f; private set
