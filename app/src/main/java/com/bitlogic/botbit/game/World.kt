@@ -4,6 +4,7 @@ import com.bitlogic.botbit.data.Characters
 import com.bitlogic.botbit.game.missions.MissionManager
 import com.bitlogic.botbit.game.missions.MissionType
 import com.bitlogic.botbit.ui.Palette
+import com.bitlogic.botbit.data.CharacterData
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -36,6 +37,23 @@ class World(
 
     var speed = GameConfig.BASE_SCROLL_SPEED
         private set
+
+    // ---- Estadisticas del robot aplicadas a la fisica ----
+    // Rangos verificados con verificador/stats_matrix.py contra los 3 niveles.
+    // El piso duro medido es JUMP_VELOCITY >= 17.76: por debajo, la plataforma
+    // de la azotea en Distrito Neon queda fuera de alcance y el nivel 3 se
+    // vuelve imposible. Por eso la formula arranca en 18.2, no mas abajo.
+    private val stats: Map<String, Int> =
+        Characters.all.firstOrNull { it.id == characterId }?.stats
+            ?: mapOf("VELOCIDAD" to 3, "SALTO" to 4)
+
+    /** SALTO 1..5 -> 18.2 .. 19.4 */
+    private val jumpVelocity: Float =
+        17.9f + (stats["SALTO"] ?: 4) * 0.3f
+
+    /** VELOCIDAD 1..5 -> 0.98x .. 1.10x del scroll base del nivel */
+    private val speedMultiplier: Float =
+        0.95f + (stats["VELOCIDAD"] ?: 3) * 0.03f
 
     private val endless = EndlessGenerator(Random(System.nanoTime()))
     private var jumpBuffer = 0f
@@ -92,9 +110,9 @@ class World(
         if (mode == GameMode.LEVEL && level != null) {
             level.obstacles.forEach { obstacles.add(it.freshCopy()) }
             gaps.addAll(level.gaps)
-            speed = level.scrollSpeed
+            speed = level.scrollSpeed * speedMultiplier
         } else {
-            speed = GameConfig.BASE_SCROLL_SPEED
+            speed = GameConfig.BASE_SCROLL_SPEED * speedMultiplier
             endless.reset()
             endless.generateUpTo(tilesVisibleX * 3f, obstacles, gaps)
         }
@@ -133,7 +151,7 @@ class World(
         if (jumpBuffer > 0f) {
             jumpBuffer -= dt
             if (player.onGround) {
-                player.vy = GameConfig.JUMP_VELOCITY
+                player.vy = jumpVelocity
                 player.onGround = false
                 jumpBuffer = 0f
                 missionManager?.updateProgress(MissionType.JUMP_COUNT)

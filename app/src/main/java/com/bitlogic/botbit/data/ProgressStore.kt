@@ -112,6 +112,13 @@ class ProgressStore(context: Context) {
         prefs.edit().remove("tower_room").remove("tower_x").remove("tower_y").apply()
     }
 
+    // ---- Preferencia de control de la Arena ----
+    // "FLOTANTE" = el joystick aparece donde pongas el dedo
+    // "FIJO"     = siempre en la esquina inferior izquierda
+    var joystickMode: String
+        get() = prefs.getString("joystick_mode", "FLOTANTE") ?: "FLOTANTE"
+        set(value) { prefs.edit().putString("joystick_mode", value).apply() }
+
     companion object {
         private const val KEY_BEST = "best_score"
         private const val KEY_TOTAL_COINS = "total_coins"

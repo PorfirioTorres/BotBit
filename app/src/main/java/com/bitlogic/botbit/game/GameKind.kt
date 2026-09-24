@@ -40,7 +40,7 @@ enum class GameKind(
         tagline = "Sobrevive a las oleadas",
         description = "Vista cenital. Te mueves y el robot dispara solo. " +
                 "Junta experiencia y aguanta lo mas posible.",
-        available = false,
+        available = true,
         prefersPortrait = true
     );
 

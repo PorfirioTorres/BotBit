@@ -82,6 +82,11 @@ fun GameScreen(
     // Objetos de dibujo reutilizables: se crean una vez, no por frame.
     val scratch = remember { RenderScratch() }
 
+    // La Arena redibuja el joystick cada frame; la preferencia se lee una vez.
+    val joystickMode = remember(store) {
+        runCatching { JoystickMode.valueOf(store.joystickMode) }.getOrDefault(JoystickMode.FLOTANTE)
+    }
+
     val frame = remember { mutableStateOf(0) }
 
     var status by remember { mutableStateOf(GameStatus.RUNNING) }
@@ -153,45 +158,44 @@ fun GameScreen(
                 Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(world) {
-                        detectTapGestures(
-                            onTap = { world.onInput(InputEvent.Tap) },
-                            onPress = { 
-                                world.onInput(InputEvent.Press)
-                                tryAwaitRelease()
-                                world.onInput(InputEvent.Release(0f)) // TODO: swipe para dirX
+                    // Cada modo escucha lo suyo. El Runner es el unico que usa
+                    // el toque simple; la Torre usa sus botones y la Arena su
+                    // joystick, ambos dibujados encima del Canvas.
+                    .then(
+                        if (kind == GameKind.RUNNER) {
+                            Modifier.pointerInput(world) {
+                                detectTapGestures(onPress = { world.onInput(InputEvent.Tap) })
                             }
-                        )
-                    }
-                    .pointerInput(world) {
-                        // Soporte para movimiento continuo en Arena
-                        if (kind == GameKind.ARENA) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    val position = event.changes.first().position
-                                    // Calcular direccion relativa al centro de la pantalla
-                                    val dx = (position.x - size.width / 2f) / (size.width / 2f)
-                                    val dy = (position.y - size.height / 2f) / (size.height / 2f)
-                                    world.onInput(InputEvent.Move(
-                                        dx.coerceIn(-1f, 1f), 
-                                        dy.coerceIn(-1f, 1f)
-                                    ))
-                                }
-                            }
-                        }
-                    }
+                        } else Modifier
+                    )
             ) {
                 Canvas(Modifier.fillMaxSize()) {
                     frame.value
                     when (world) {
                         is World -> drawWorld(world, tilesVisible, theme, scratch)
                         is TowerWorld -> drawTowerWorld(world, tilesVisible, theme, scratch)
+                        // Faltaba esta rama: ArenaWorld corria pero nunca se dibujaba.
+                        is ArenaWorld -> drawArenaWorld(world, theme, scratch)
                     }
                 }
 
-                if (world.attempts == 1 && hudProgress < 0.04f && mode == GameMode.LEVEL) {
-                    TapHint(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp))
+                when (kind) {
+                    GameKind.ARENA -> VirtualJoystick(
+                        mode = joystickMode,
+                        onInput = { world.onInput(it) },
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    GameKind.TOWER -> TowerControls(
+                        chargeRatio = (world as? TowerWorld)?.chargeRatio ?: 0f,
+                        onInput = { world.onInput(it) },
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
+
+                    GameKind.RUNNER ->
+                        if (world.attempts == 1 && hudProgress < 0.04f && mode == GameMode.LEVEL) {
+                            TapHint(Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp))
+                        }
                 }
             }
         }

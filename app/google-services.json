@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "380477130852",
+    "project_id": "bitlogic-lsti2316607-dev",
+    "storage_bucket": "bitlogic-lsti2316607-dev.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:380477130852:android:b0f29ab7d8e23b31503771",
+        "android_client_info": {
+          "package_name": "com.bitlogic.botbit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "380477130852-rdiducdt58poqm4vm4ellh42dg2ost5u.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.bitlogic.botbit",
+            "certificate_hash": "261e46c3c5fcf07640478ace161a41fc00ad012c"
+          }
+        },
+        {
+          "client_id": "380477130852-eng3qdssq7jjq8q866dbbvbcc6v2snsr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAd8i2TbIFlTP4laUzBJDl8NDWA0CSwnsw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "380477130852-eng3qdssq7jjq8q866dbbvbcc6v2snsr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
