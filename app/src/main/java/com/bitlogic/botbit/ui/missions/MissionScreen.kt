@@ -133,6 +133,9 @@ fun MissionScreen(
                             ) {
                                 MissionCard(
                                     mission = mission,
+                                    onClaim = {
+                                        missionManager.claim(mission.mission.id)
+                                    },
                                     onComplete = { 
                                         if (!mission.completed) {
                                             missionManager.completeMission(mission.mission.id)
@@ -142,6 +145,9 @@ fun MissionScreen(
                                         if (mission.completed) {
                                             missionManager.resetMission(mission.mission.id)
                                         }
+                                    },
+                                    onDelete = {
+                                        missionManager.deleteMission(mission.mission.id)
                                     }
                                 )
                             }

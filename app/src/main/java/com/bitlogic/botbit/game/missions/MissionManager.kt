@@ -1,13 +1,17 @@
 package com.bitlogic.botbit.game.missions
 
 import com.bitlogic.botbit.data.MissionStore
+import com.bitlogic.botbit.data.ProgressStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlin.random.Random
 
 class MissionManager(
-    private val store: MissionStore
+    private val store: MissionStore,
+    // Sin esto el manager no tenia forma de entregar recompensas: por eso
+    // completar una mision no daba ni monedas ni personajes.
+    private val progress: ProgressStore
 ) {
     private val _missions = MutableStateFlow<List<MissionProgress>>(emptyList())
     val missions: StateFlow<List<MissionProgress>> = _missions.asStateFlow()
@@ -62,6 +66,23 @@ class MissionManager(
                 target = 100,
                 rewardCoins = 30,
                 rewardCharacter = "shadow"
+            ),
+            Mission(
+                id = "ahorrador",
+                title = "Ahorrador",
+                description = "Junta 10 monedas en una sola partida sin morir",
+                type = MissionType.COINS_IN_ONE_RUN,
+                target = 10,
+                rewardCoins = 25
+            ),
+            Mission(
+                id = "maraton",
+                title = "Maraton",
+                description = "Recorre 5000 tiles en total",
+                type = MissionType.TOTAL_DISTANCE,
+                target = 5000,
+                rewardCoins = 40,
+                rewardCharacter = "terra"
             )
         )
 
@@ -69,6 +90,7 @@ class MissionManager(
             MissionProgress(
                 mission = mission,
                 progress = store.getMissionProgress(mission.id),
+                claimed = store.isMissionClaimed(mission.id),
                 completed = store.isMissionCompleted(mission.id)
             )
         }
@@ -79,7 +101,6 @@ class MissionManager(
             if (mission.mission.id == missionId && !mission.completed) {
                 store.saveMissionProgress(mission.mission.id, mission.mission.target)
                 store.markMissionCompleted(mission.mission.id)
-                applyReward(mission.mission)
                 mission.copy(progress = mission.mission.target, completed = true)
             } else {
                 mission
@@ -136,6 +157,7 @@ class MissionManager(
                 MissionType.REACH_SCORE -> random.nextInt(300, 1000)
                 MissionType.PLAY_ENDLESS -> random.nextInt(50, 200)
                 MissionType.JUMP_COUNT -> random.nextInt(20, 80)
+                else -> 10
             }
 
             val rewardCharacter = if (random.nextBoolean()) rewards[random.nextInt(rewards.size)] else null
@@ -149,6 +171,7 @@ class MissionManager(
                     MissionType.REACH_SCORE -> "Alcanza $target puntos"
                     MissionType.PLAY_ENDLESS -> "Sobrevive $target tiles en modo infinito"
                     MissionType.JUMP_COUNT -> "Realiza $target saltos"
+                    else -> "Misión $target"
                 },
                 type = selectedType,
                 target = target,
@@ -168,15 +191,48 @@ class MissionManager(
         return missions
     }
 
+    /**
+     * Entrega la recompensa. Solo se llama desde claim(), nunca automaticamente:
+     * el jugador tiene que presionar "Reclamar" para verla llegar.
+     */
     private fun applyReward(mission: Mission) {
-        val character = mission.rewardCharacter
-        if (character != null) {
-            unlockCharacter(character)
+        if (mission.rewardCoins > 0) {
+            progress.addCoins(mission.rewardCoins)
         }
+        mission.rewardCharacter?.let { progress.unlockCharacter(it) }
     }
 
-    private fun unlockCharacter(characterId: String) {
-        // Guardar en ProgressStore que el personaje está desbloqueado
+    /**
+     * Cobra una mision cumplida. Devuelve las monedas entregadas, o null si la
+     * mision no estaba lista o ya se habia cobrado.
+     */
+    fun claim(missionId: String): Int? {
+        val item = _missions.value.firstOrNull { it.mission.id == missionId } ?: return null
+        if (!item.claimable) return null
+
+        applyReward(item.mission)
+        store.markMissionClaimed(missionId)
+        _missions.value = _missions.value.map {
+            if (it.mission.id == missionId) it.copy(claimed = true) else it
+        }
+        return item.mission.rewardCoins
+    }
+
+    /**
+     * Fija el progreso al valor absoluto en vez de sumarlo.
+     * Ahorrador y Maraton reportan totales, no incrementos: si se usara
+     * updateProgress, cada partida sumaria encima de la anterior.
+     */
+    fun setProgress(type: MissionType, value: Int) {
+        _missions.value = _missions.value.map { mp ->
+            if (mp.mission.type != type || mp.completed) return@map mp
+            val v = maxOf(value, mp.progress)
+            store.saveMissionProgress(mp.mission.id, v)
+            if (v >= mp.mission.target) {
+                store.markMissionCompleted(mp.mission.id)
+                mp.copy(progress = v, completed = true)
+            } else mp.copy(progress = v)
+        }
     }
 
     fun updateProgress(type: MissionType, amount: Int = 1) {
@@ -185,9 +241,9 @@ class MissionManager(
                 val newProgress = mission.progress + amount
                 store.saveMissionProgress(mission.mission.id, newProgress)
                 if (newProgress >= mission.mission.target) {
+                    // Se marca cumplida, pero la recompensa espera al boton Reclamar.
                     mission.copy(progress = newProgress, completed = true).also {
                         store.markMissionCompleted(mission.mission.id)
-                        applyReward(mission.mission)
                     }
                 } else {
                     mission.copy(progress = newProgress)

@@ -7,17 +7,13 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.bitlogic.botbit.data.CloudStore
 import com.bitlogic.botbit.data.MissionStore
 import com.bitlogic.botbit.data.ProgressStore
 import com.bitlogic.botbit.game.GameKind
@@ -32,6 +28,7 @@ import com.bitlogic.botbit.ui.MenuScreen
 import com.bitlogic.botbit.ui.ModeSelectScreen
 import com.bitlogic.botbit.ui.Palette
 import com.bitlogic.botbit.ui.ScreenInventory
+import com.bitlogic.botbit.ui.SettingsScreen
 import com.bitlogic.botbit.ui.TermsScreen
 import com.bitlogic.botbit.ui.inventory.InventoryViewModel
 import com.bitlogic.botbit.ui.login.SSOLoginScreen
@@ -39,6 +36,7 @@ import com.bitlogic.botbit.ui.login.SSOState
 import com.bitlogic.botbit.ui.login.SSOViewModel
 import com.bitlogic.botbit.ui.missions.MissionScreen
 import com.bitlogic.botbit.utils.AnalyticsHelper
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -62,12 +60,19 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun BotBitApp() {
         val store = remember { ProgressStore(this) }
+        val cloud = remember { CloudStore(store) }
         val missionStore = remember { MissionStore(this) }
-        val missionManager = remember { MissionManager(missionStore) }
+        val missionManager = remember { MissionManager(missionStore, store) }
         val inventoryViewModel: InventoryViewModel = hiltViewModel()
         val ssoViewModel: SSOViewModel = hiltViewModel()
         
         val ssoState by ssoViewModel.ssoState.collectAsState()
+
+        LaunchedEffect(ssoState) {
+            if (ssoState is SSOState.Authenticated) {
+                cloud.syncOnLogin()
+            }
+        }
         
         val levels = remember {
             listOf("level_01.json", "level_02.json", "level_03.json").mapNotNull { file ->
@@ -98,7 +103,7 @@ class MainActivity : ComponentActivity() {
                 when (val current = screen) {
                     is Screen.Terms -> TermsScreen(onBack = { 
                         if (ssoState is SSOState.Authenticated) screen = Screen.Menu
-                        else screen = Screen.Menu // Will fall back to login if not auth
+                        else screen = Screen.Menu
                     })
 
                     is Screen.Menu -> MenuScreen(
@@ -146,18 +151,22 @@ class MainActivity : ComponentActivity() {
                         onBack = { screen = Screen.Menu }
                     )
 
-                    is Screen.Settings -> Box(Modifier.fillMaxSize()) {
-                        Text("Pantalla de Ajustes - Próximamente", Modifier.align(Alignment.Center))
-                        Button(onClick = { screen = Screen.Menu }, Modifier.align(Alignment.BottomCenter).padding(32.dp)) {
-                            Text("Volver")
-                        }
-                    }
+                    is Screen.Settings -> SettingsScreen(
+                        store = store,
+                        userEmail = FirebaseAuth.getInstance().currentUser?.email,
+                        onSignOut = {
+                            FirebaseAuth.getInstance().signOut()
+                            screen = Screen.Menu
+                        },
+                        onBack = { screen = Screen.Menu },
+                        onCrashTest = { throw RuntimeException("Crash de prueba - BotBit") }
+                    )
 
                     is Screen.Playing -> GameScreen(
                         kind = current.kind,
                         mode = current.mode,
                         level = current.level,
-                        store = store, // NUEVO
+                        store = store,
                         bestScore = best,
                         selectedCharacter = selectedCharacter,
                         missionManager = missionManager,
@@ -178,6 +187,16 @@ class MainActivity : ComponentActivity() {
                                     missionManager.updateProgress(MissionType.COMPLETE_LEVEL)
                                 }
                             }
+
+                            // 3. Misiones nuevas
+                            if (completed || score > 0) {
+                                missionManager.setProgress(MissionType.COINS_IN_ONE_RUN, coins)
+                            }
+                            store.totalDistance += score
+                            missionManager.setProgress(MissionType.TOTAL_DISTANCE, store.totalDistance)
+
+                            // 4. Sincronización en la nube
+                            cloud.push()
                         },
                         onMenu = { screen = Screen.Menu }
                     )

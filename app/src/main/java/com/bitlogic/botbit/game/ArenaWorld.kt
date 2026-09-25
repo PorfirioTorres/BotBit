@@ -3,7 +3,6 @@ package com.bitlogic.botbit.game
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.sqrt
 
 /**
  * MODO ARENA (estilo Vampire Survivors).
@@ -22,6 +21,12 @@ class ArenaWorld(
         private set
 
     // --- Estado del jugador ---
+    // ---- Vida: 3 corazones con invulnerabilidad tras el golpe ----
+    // Sin los segundos de gracia, estar rodeado te quita los 3 corazones en
+    // el mismo frame y se siente igual de arbitrario que morir de un golpe.
+    var hearts = MAX_HEARTS; private set
+    var invulnerable = 0f; private set
+
     var px = 0f; private set
     var py = 0f; private set
     private var vx = 0f
@@ -50,6 +55,8 @@ class ArenaWorld(
         elapsed += dt
 
         // 1. Movimiento del jugador
+        if (invulnerable > 0f) invulnerable -= dt
+
         px += vx * dt * PLAYER_SPEED
         py += vy * dt * PLAYER_SPEED
 
@@ -73,7 +80,7 @@ class ArenaWorld(
         // 4. Actualización de Balas y Enemigos
         updateEntities(dt)
 
-        // 5. Colisiones (Simplificadas por ahora)
+        // 5. Colisiones
         checkCollisions()
     }
 
@@ -123,6 +130,21 @@ class ArenaWorld(
 
         for (e in enemies) {
             if (!e.active) continue
+
+            // Contacto con el jugador
+            val ddx = e.x - px
+            val ddy = e.y - py
+            if (invulnerable <= 0f && ddx * ddx + ddy * ddy < CONTACT_RADIUS * CONTACT_RADIUS) {
+                hearts -= 1
+                invulnerable = INVULN_TIME
+                e.active = false                 // el enemigo se consume al golpear
+                if (hearts <= 0) {
+                    status = GameStatus.DEAD
+                    return
+                }
+                continue
+            }
+
             val angle = atan2(py - e.y, px - e.x)
             e.x += cos(angle) * ENEMY_SPEED * dt
             e.y += sin(angle) * ENEMY_SPEED * dt
@@ -132,13 +154,6 @@ class ArenaWorld(
     private fun checkCollisions() {
         for (e in enemies) {
             if (!e.active) continue
-            
-            // Enemigo vs Jugador
-            val distPlayerSq = (e.x - px) * (e.x - px) + (e.y - py) * (e.y - py)
-            if (distPlayerSq < 0.5f) {
-                // Game Over por ahora al primer toque
-                status = GameStatus.DEAD
-            }
 
             // Enemigo vs Balas
             for (b in bullets) {
@@ -160,7 +175,6 @@ class ArenaWorld(
             level++
             xp = 0
             xpToNextLevel = (xpToNextLevel * 1.2f).toInt()
-            // TODO: Mostrar selector de mejora
         }
     }
 
@@ -172,6 +186,8 @@ class ArenaWorld(
     }
 
     override fun retry() {
+        hearts = MAX_HEARTS
+        invulnerable = 0f
         px = 0f; py = 0f; vx = 0f; vy = 0f
         score = 0; coins = 0; level = 1; xp = 0
         enemies.forEach { it.active = false }
@@ -180,6 +196,13 @@ class ArenaWorld(
     }
 
     companion object {
+        const val MAX_HEARTS = 3
+        /** Distancia a la que un enemigo hace dano, en tiles. */
+        const val CONTACT_RADIUS = 0.7f
+        /** Segundos de gracia tras recibir un golpe. Sin esto, estar rodeado
+         *  te quita los 3 corazones en el mismo frame. */
+        const val INVULN_TIME = 1.2f
+
         const val MAX_ENEMIES = 100
         const val MAX_BULLETS = 50
         const val PLAYER_SPEED = 6f

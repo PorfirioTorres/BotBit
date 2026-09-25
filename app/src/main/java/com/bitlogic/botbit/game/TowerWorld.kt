@@ -45,6 +45,12 @@ class TowerWorld(
 
     /** Sala visible. La camara no interpola: salta de sala en sala. */
     var room = 0; private set
+
+    /** Altura actual en "metros" para el HUD. */
+    val altura: Float get() = y
+
+    /** Altura maxima alcanzada en este intento. */
+    val record: Float get() = maxHeight
     private var maxHeight = 0f
 
     init {
@@ -150,6 +156,12 @@ class TowerWorld(
         }
         
         maxHeight = maxOf(maxHeight, y)
+
+        // Victoria: llegar a la plataforma de meta. TowerWorld nunca ponia
+        // COMPLETED, asi que la torre no tenia final aunque la subieras entera.
+        if (y >= GOAL_HEIGHT && onGround) {
+            status = GameStatus.COMPLETED
+        }
     }
 
     override fun onInput(event: InputEvent) {
@@ -196,6 +208,8 @@ class TowerWorld(
     val chargeRatio: Float get() = if (charging) charge / CHARGE_MAX else 0f
 
     private companion object {
+        /** Altura de la plataforma de meta del tower_map verificado. */
+        const val GOAL_HEIGHT = 300f
         const val CHARGE_MAX = 0.65f   // segundos para carga completa
         const val JUMP_MIN = 12f
         const val JUMP_MAX = 24f

@@ -23,7 +23,6 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import com.bitlogic.botbit.R
 
@@ -128,10 +127,8 @@ private fun PortraitMenuScreen(
             text = "v1.0 · BITLOGIC STUDIO",
             color = Palette.Muted,
             fontSize = 10.sp,
-            modifier = Modifier.clickable { 
-                // Crash de prueba para validar Crashlytics
-                throw RuntimeException("Test Crash: BotBit") 
-            }
+            // La prueba de Crashlytics se movio a Ajustes -> DESARROLLO.
+            // Aqui cualquier jugador la tocaba sin querer y la app se cerraba.
         )
 
         Spacer(Modifier.height(16.dp))    }

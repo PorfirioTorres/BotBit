@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
 import com.bitlogic.botbit.data.ProgressStore
 import com.bitlogic.botbit.game.GameConfig
+import com.bitlogic.botbit.utils.SoundManager
+import androidx.compose.ui.platform.LocalContext
 import com.bitlogic.botbit.game.GameKind
 import com.bitlogic.botbit.game.GameMode
 import com.bitlogic.botbit.game.GameStatus
@@ -82,6 +84,20 @@ fun GameScreen(
     // Objetos de dibujo reutilizables: se crean una vez, no por frame.
     val scratch = remember { RenderScratch() }
 
+    val ctx = LocalContext.current
+    LaunchedEffect(kind, theme) {
+        SoundManager.musicVolume = store.musicVolume
+        SoundManager.sfxVolume = store.sfxVolume
+        SoundManager.playMusicForTheme(
+            ctx,
+            when (kind) {
+                GameKind.TOWER -> "torre"
+                GameKind.ARENA -> "arena"
+                else -> theme.id
+            }
+        )
+    }
+
     // La Arena redibuja el joystick cada frame; la preferencia se lee una vez.
     val joystickMode = remember(store) {
         runCatching { JoystickMode.valueOf(store.joystickMode) }.getOrDefault(JoystickMode.FLOTANTE)
@@ -95,6 +111,13 @@ fun GameScreen(
     var hudCoins by remember { mutableStateOf(0) }
     var hudProgress by remember { mutableStateOf(0f) }
     var finalScore by remember { mutableStateOf(0) }
+
+    // Los efectos se disparan desde AQUI, no desde update(). La simulacion
+    // corre con paso fijo y puede ejecutar varios pasos en un frame, asi que
+    // una moneda sonaria varias veces. Comparando contra el frame anterior
+    // suena una sola vez por cambio real.
+    var prevCoins by remember { mutableStateOf(0) }
+    var prevAirborne by remember { mutableStateOf(false) }
 
     LaunchedEffect(world) {
         var last = 0L
@@ -119,7 +142,21 @@ fun GameScreen(
                 last = now
                 frame.value++
 
+                // --- Efectos de sonido ---
+                if (world.coins != prevCoins) {
+                    if (world.coins > prevCoins) SoundManager.playCoinSound()
+                    prevCoins = world.coins
+                }
+                val airborne = (world as? World)?.player?.onGround == false
+                if (airborne && !prevAirborne) SoundManager.playJumpSound()
+                prevAirborne = airborne
+
                 if (world.status != status) {
+                    when (world.status) {
+                        GameStatus.DEAD -> SoundManager.playDeathSound()
+                        GameStatus.COMPLETED -> SoundManager.playWinSound()
+                        else -> {}
+                    }
                     finalScore = world.score
                     status = world.status
                 }
@@ -143,7 +180,18 @@ fun GameScreen(
 
         Column(Modifier.fillMaxSize().safeDrawingPadding()) {
 
-            Hud(
+            when (kind) {
+                GameKind.TOWER -> TowerHud(
+                    world = world as TowerWorld,
+                    paused = paused,
+                    onTogglePause = { paused = !paused }
+                )
+                GameKind.ARENA -> ArenaHud(
+                    world = world as ArenaWorld,
+                    paused = paused,
+                    onTogglePause = { paused = !paused }
+                )
+                GameKind.RUNNER -> Hud(
                 title = world.title,
                 progress = hudProgress,
                 showProgress = (kind == GameKind.RUNNER && mode == GameMode.LEVEL),
@@ -152,7 +200,8 @@ fun GameScreen(
                 isEndless = (mode == GameMode.ENDLESS),
                 paused = paused,
                 onTogglePause = { paused = !paused }
-            )
+                )
+            }
 
             Box(
                 Modifier

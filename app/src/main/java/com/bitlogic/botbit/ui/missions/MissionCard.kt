@@ -23,8 +23,10 @@ import com.bitlogic.botbit.ui.Palette
 @Composable
 fun MissionCard(
     mission: MissionProgress,
+    onClaim: () -> Unit = {},
     onComplete: () -> Unit = {},
     onReset: () -> Unit = {},
+    onDelete: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var isExpanded by remember { mutableStateOf(false) }
@@ -41,7 +43,7 @@ fun MissionCard(
         ),
         border = BorderStroke(
             if (mission.completed) 2.dp else 1.dp,
-            if (mission.completed) Palette.Green else Palette.Track
+            if (mission.claimed) Palette.Muted else if (mission.completed) Palette.Green else Palette.Track
         )
     ) {
         Column(
@@ -59,7 +61,7 @@ fun MissionCard(
                         text = mission.mission.title,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (mission.completed) Palette.Green else Palette.Ink
+                        color = if (mission.claimed) Palette.Muted else if (mission.completed) Palette.Green else Palette.Ink
                     )
                     
                     val progress = (mission.progress.toFloat() / mission.mission.target).coerceIn(0f, 1f)
@@ -74,14 +76,16 @@ fun MissionCard(
                                 .fillMaxWidth(progress)
                                 .height(6.dp)
                                 .background(
-                                    if (mission.completed) Palette.Green else Palette.Yellow,
+                                    if (mission.claimed) Palette.Muted else if (mission.completed) Palette.Green else Palette.Yellow,
                                     RoundedCornerShape(3.dp)
                                 )
                         )
                     }
                 }
                 
-                if (mission.completed) {
+                if (mission.claimed) {
+                    Text(text = "Reclamada", fontSize = 12.sp, color = Palette.Muted, modifier = Modifier.padding(end = 8.dp))
+                } else if (mission.completed) {
                     Text(text = "Completada", fontSize = 12.sp, color = Palette.Green, modifier = Modifier.padding(end = 8.dp))
                 } else {
                     Text(
@@ -139,8 +143,23 @@ fun MissionCard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // BOTON COMPLETAR (si no esta completada)
-                    if (!mission.completed) {
+                    // BOTÓN RECLAMAR (si está cumplida y no cobrada)
+                    if (mission.claimable) {
+                        Button(
+                            onClick = onClaim,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Palette.Yellow
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "RECLAMAR +${mission.mission.rewardCoins}",
+                                color = Palette.Black,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp
+                            )
+                        }
+                    } else if (!mission.completed) {
                         Button(
                             onClick = onComplete,
                             colors = ButtonDefaults.buttonColors(
@@ -155,14 +174,11 @@ fun MissionCard(
                                 fontSize = 12.sp
                             )
                         }
-                    }
-                    
-                    // BOTON REINICIAR (si esta completada)
-                    if (mission.completed) {
+                    } else if (mission.claimed) {
                         Button(
                             onClick = onReset,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Palette.Yellow
+                                containerColor = Palette.Track
                             ),
                             modifier = Modifier.weight(1f)
                         ) {
@@ -177,7 +193,7 @@ fun MissionCard(
                     
                     // BOTON ELIMINAR (siempre visible en expandido)
                     Button(
-                        onClick = { /* Manejado por swipe */ },
+                        onClick = onDelete,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Palette.Red
                         ),
@@ -186,26 +202,6 @@ fun MissionCard(
                         Text(
                             text = "X",
                             fontSize = 16.sp
-                        )
-                    }
-                }
-                
-                if (mission.completed) {
-                    Spacer(Modifier.height(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Palette.Green.copy(alpha = 0.15f))
-                            .padding(8.dp)
-                    ) {
-                        Text(
-                            text = "COMPLETADA - Desliza para eliminar",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Palette.Green,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
                 }

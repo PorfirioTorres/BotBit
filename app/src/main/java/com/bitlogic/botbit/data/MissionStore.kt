@@ -18,4 +18,11 @@ class MissionStore(context: Context) {
     fun markMissionCompleted(missionId: String, completed: Boolean = true) {
         prefs.edit().putBoolean("completed_$missionId", completed).apply()
     }
+
+    fun isMissionClaimed(missionId: String): Boolean =
+        prefs.getBoolean("mission_claimed_$missionId", false)
+
+    fun markMissionClaimed(missionId: String) {
+        prefs.edit().putBoolean("mission_claimed_$missionId", true).apply()
+    }
 }

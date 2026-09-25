@@ -16,6 +16,11 @@ class ProgressStore(context: Context) {
         get() = prefs.getInt(KEY_TOTAL_COINS, 0)
         private set(value) { prefs.edit().putInt(KEY_TOTAL_COINS, value).apply() }
 
+    /** Distancia total acumulada en tiles. */
+    var totalDistance: Int
+        get() = prefs.getInt("total_distance", 0)
+        set(value) { prefs.edit().putInt("total_distance", value).apply() }
+
     /** Suma monedas al monedero global. */
     fun addCoins(amount: Int) {
         if (amount > 0) {
@@ -118,6 +123,41 @@ class ProgressStore(context: Context) {
     var joystickMode: String
         get() = prefs.getString("joystick_mode", "FLOTANTE") ?: "FLOTANTE"
         set(value) { prefs.edit().putString("joystick_mode", value).apply() }
+
+    // ---- Lecturas en bloque, para la sincronización con la nube ----
+
+    /** Todos los robots desbloqueados. "classic" siempre está incluido. */
+    fun unlockedCharacterIds(): List<String> =
+        (prefs.getStringSet("unlocked_characters", setOf("classic")) ?: setOf("classic"))
+            .toList()
+            .sorted()
+
+    /**
+     * Ids de los niveles marcados como completados.
+     *
+     * Se derivan de las llaves "done_<id>" en vez de guardar una lista aparte:
+     * así no hay dos fuentes de verdad que puedan quedar desincronizadas.
+     */
+    fun completedLevelIds(): List<String> =
+        prefs.all.keys
+            .filter { it.startsWith("done_") && prefs.getBoolean(it, false) }
+            .map { it.removePrefix("done_") }
+            .sorted()
+
+    /** Borra todo el progreso local. Lo usa el botón de Ajustes. */
+    fun clearAll() {
+        prefs.edit().clear().apply()
+    }
+
+    // ---- Volúmenes de audio, para la pantalla de Ajustes ----
+
+    var musicVolume: Float
+        get() = prefs.getFloat("vol_music", 0.6f)
+        set(value) { prefs.edit().putFloat("vol_music", value.coerceIn(0f, 1f)).apply() }
+
+    var sfxVolume: Float
+        get() = prefs.getFloat("vol_sfx", 0.8f)
+        set(value) { prefs.edit().putFloat("vol_sfx", value.coerceIn(0f, 1f)).apply() }
 
     companion object {
         private const val KEY_BEST = "best_score"
