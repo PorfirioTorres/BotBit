@@ -40,6 +40,8 @@ fun SettingsScreen(
     userEmail: String?,
     onSignOut: () -> Unit,
     onBack: () -> Unit,
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
     onCrashTest: (() -> Unit)? = null
 ) {
     val configuration = LocalConfiguration.current
@@ -75,6 +77,32 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Spacer(Modifier.height(8.dp))
+
+            // ---------- Apariencia ----------
+            Seccion("APARIENCIA") {
+                Text(
+                    "Tema",
+                    fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Palette.Black
+                )
+                Spacer(Modifier.height(6.dp))
+                Row {
+                    ThemeMode.entries.forEachIndexed { i, modo ->
+                        if (i > 0) Spacer(Modifier.width(8.dp))
+                        Opcion(modo.label, themeMode == modo, Modifier.weight(1f)) {
+                            onThemeModeChange(modo)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    when (themeMode) {
+                        ThemeMode.SISTEMA -> "Usa el mismo modo que tu teléfono."
+                        ThemeMode.CLARO -> "Siempre claro."
+                        ThemeMode.OSCURO -> "Siempre oscuro."
+                    },
+                    fontSize = 12.sp, color = Palette.Muted
+                )
+            }
 
             // ---------- Controles ----------
             Seccion("CONTROLES") {
@@ -221,7 +249,10 @@ private fun Opcion(
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Black, color = Palette.Black)
+        Text(
+            label, fontSize = 13.sp, fontWeight = FontWeight.Black,
+            color = if (activo) Palette.OnAccent else Palette.Black
+        )
     }
 }
 

@@ -5,6 +5,11 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
@@ -30,6 +35,7 @@ import com.bitlogic.botbit.ui.Palette
 import com.bitlogic.botbit.ui.ScreenInventory
 import com.bitlogic.botbit.ui.SettingsScreen
 import com.bitlogic.botbit.ui.TermsScreen
+import com.bitlogic.botbit.ui.ThemeMode
 import com.bitlogic.botbit.ui.inventory.InventoryViewModel
 import com.bitlogic.botbit.ui.login.SSOLoginScreen
 import com.bitlogic.botbit.ui.login.SSOState
@@ -50,6 +56,16 @@ class MainActivity : ComponentActivity() {
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+
+        // Se fija el tema ANTES del primer frame para que no parpadee en claro
+        // al abrir la app en modo oscuro.
+        Palette.isDark = when (ThemeMode.from(ProgressStore(this).themeMode)) {
+            ThemeMode.CLARO -> false
+            ThemeMode.OSCURO -> true
+            ThemeMode.SISTEMA -> (resources.configuration.uiMode and
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                    android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
 
         setContent {
@@ -89,12 +105,42 @@ class MainActivity : ComponentActivity() {
         
         var selectedCharacter by remember { mutableStateOf(store.getSelectedCharacter()) }
 
+        // ---- Tema claro / oscuro ----
+        var themeMode by remember { mutableStateOf(ThemeMode.from(store.themeMode)) }
+        val systemDark = isSystemInDarkTheme()
+        val dark = when (themeMode) {
+            ThemeMode.CLARO -> false
+            ThemeMode.OSCURO -> true
+            ThemeMode.SISTEMA -> systemDark
+        }
+        // Palette.isDark es estado de Compose: cambiarlo repinta toda la app.
+        SideEffect { Palette.isDark = dark }
+
+        // Los componentes de Material (iconos, sliders, barra de Terminos)
+        // toman sus colores de aqui, no de Palette.
+        val colorScheme = if (dark) {
+            darkColorScheme(
+                primary = Palette.DarkYellow, onPrimary = Palette.OnAccent,
+                background = Palette.Dark.Bg, onBackground = Palette.Dark.Ink,
+                surface = Palette.Dark.Surface, onSurface = Palette.Dark.Ink
+            )
+        } else {
+            lightColorScheme(
+                primary = Palette.DarkYellow, onPrimary = Palette.OnAccent,
+                background = Palette.Light.Bg, onBackground = Palette.Light.Ink,
+                surface = Palette.Light.Surface, onSurface = Palette.Light.Ink
+            )
+        }
+        val contentColor = if (dark) Palette.Dark.Ink else Palette.Light.Ink
+
         LaunchedEffect(screen) {
             AnalyticsHelper.logScreenView(screen.javaClass.simpleName)
         }
 
+        MaterialTheme(colorScheme = colorScheme) {
+        CompositionLocalProvider(LocalContentColor provides contentColor) {
         Box(Modifier.fillMaxSize().background(Palette.Bg)) {
-            if (ssoState !is SSOState.Authenticated && screen != Screen.Terms) {
+            if (!ssoState.canPlay && screen != Screen.Terms) {
                 SSOLoginScreen(
                     viewModel = ssoViewModel,
                     onShowTerms = { screen = Screen.Terms }
@@ -102,7 +148,7 @@ class MainActivity : ComponentActivity() {
             } else {
                 when (val current = screen) {
                     is Screen.Terms -> TermsScreen(onBack = { 
-                        if (ssoState is SSOState.Authenticated) screen = Screen.Menu
+                        if (ssoState.canPlay) screen = Screen.Menu
                         else screen = Screen.Menu
                     })
 
@@ -155,10 +201,18 @@ class MainActivity : ComponentActivity() {
                         store = store,
                         userEmail = FirebaseAuth.getInstance().currentUser?.email,
                         onSignOut = {
-                            FirebaseAuth.getInstance().signOut()
+                            // Antes solo se cerraba sesion en Firebase y el
+                            // SSOViewModel seguia en Authenticated: el menu
+                            // seguia abierto pero la nube ya no recibia nada.
+                            ssoViewModel.signOut(this@MainActivity)
                             screen = Screen.Menu
                         },
                         onBack = { screen = Screen.Menu },
+                        themeMode = themeMode,
+                        onThemeModeChange = { modo ->
+                            themeMode = modo
+                            store.themeMode = modo.name
+                        },
                         onCrashTest = { throw RuntimeException("Crash de prueba - BotBit") }
                     )
 
@@ -202,6 +256,8 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+        }
         }
     }
 

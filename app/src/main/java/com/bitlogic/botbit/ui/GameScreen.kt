@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +44,7 @@ import com.bitlogic.botbit.data.ProgressStore
 import com.bitlogic.botbit.game.GameConfig
 import com.bitlogic.botbit.utils.SoundManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import com.bitlogic.botbit.game.GameKind
 import com.bitlogic.botbit.game.GameMode
 import com.bitlogic.botbit.game.GameStatus
@@ -69,6 +71,14 @@ fun GameScreen(
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp >= 600
     val tilesVisible = if (isTablet) 16f else GameConfig.TILES_VISIBLE_X
+
+    // Alto que ocupan los botones de carga de la Torre (84dp + margenes).
+    // En horizontal los botones laterales quedan fuera de la torre centrada y
+    // solo estorba el boton del centro, que es mas chico.
+    val isLandscapeScreen = configuration.screenWidthDp > configuration.screenHeightDp
+    val towerInsetPx = with(LocalDensity.current) {
+        (if (isLandscapeScreen) 84.dp else 124.dp).toPx()
+    }
     
     val world: GameWorld = remember(kind, mode, level, missionManager, selectedCharacter, tilesVisible) {
         when (kind) {
@@ -111,6 +121,8 @@ fun GameScreen(
     var hudCoins by remember { mutableStateOf(0) }
     var hudProgress by remember { mutableStateOf(0f) }
     var finalScore by remember { mutableStateOf(0) }
+    // Sube cada 4 frames. Los HUD de Torre y Arena lo leen para refrescarse.
+    var hudVersion by remember { mutableIntStateOf(0) }
 
     // Los efectos se disparan desde AQUI, no desde update(). La simulacion
     // corre con paso fijo y puede ejecutar varios pasos en un frame, asi que
@@ -162,6 +174,7 @@ fun GameScreen(
                 }
                 if (++hudTick >= 4) {
                     hudTick = 0
+                    hudVersion++
                     hudScore = world.score
                     hudCoins = world.coins
                     hudProgress = world.progress
@@ -183,11 +196,13 @@ fun GameScreen(
             when (kind) {
                 GameKind.TOWER -> TowerHud(
                     world = world as TowerWorld,
+                    tick = hudVersion,
                     paused = paused,
                     onTogglePause = { paused = !paused }
                 )
                 GameKind.ARENA -> ArenaHud(
                     world = world as ArenaWorld,
+                    tick = hudVersion,
                     paused = paused,
                     onTogglePause = { paused = !paused }
                 )
@@ -222,7 +237,7 @@ fun GameScreen(
                     frame.value
                     when (world) {
                         is World -> drawWorld(world, tilesVisible, theme, scratch)
-                        is TowerWorld -> drawTowerWorld(world, tilesVisible, theme, scratch)
+                        is TowerWorld -> drawTowerWorld(world, theme, scratch, towerInsetPx)
                         // Faltaba esta rama: ArenaWorld corria pero nunca se dibujaba.
                         is ArenaWorld -> drawArenaWorld(world, theme, scratch)
                     }

@@ -149,6 +149,11 @@ class ProgressStore(context: Context) {
         prefs.edit().clear().apply()
     }
 
+    // ---- Tema de la interfaz: "SISTEMA", "CLARO" u "OSCURO" ----
+    var themeMode: String
+        get() = prefs.getString("theme_mode", "SISTEMA") ?: "SISTEMA"
+        set(value) { prefs.edit().putString("theme_mode", value).apply() }
+
     // ---- Volúmenes de audio, para la pantalla de Ajustes ----
 
     var musicVolume: Float

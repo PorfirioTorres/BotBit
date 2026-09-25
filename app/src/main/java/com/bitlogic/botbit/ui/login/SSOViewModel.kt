@@ -46,6 +46,19 @@ class SSOViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Entrar sin cuenta. El progreso se guarda solo en este dispositivo.
+     * No toca Firebase: es puramente un cambio de estado local.
+     */
+    fun continueAsGuest() {
+        _ssoState.value = SSOState.Guest
+    }
+
+    /** Volver a la pantalla de login desde el modo invitado. */
+    fun backToLogin() {
+        _ssoState.value = SSOState.Idle
+    }
+
     fun signOut(context: Context) {
         viewModelScope.launch {
             repository.signOut(context)

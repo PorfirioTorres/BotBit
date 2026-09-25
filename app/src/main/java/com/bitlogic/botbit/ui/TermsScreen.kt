@@ -25,6 +25,7 @@ fun TermsScreen(onBack: () -> Unit) {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
+                    navigationIconContentColor = Palette.Ink,
                     containerColor = Palette.Bg,
                     titleContentColor = Palette.Ink
                 )
@@ -37,7 +38,16 @@ fun TermsScreen(onBack: () -> Unit) {
                 factory = { context ->
                     WebView(context).apply {
                         webViewClient = WebViewClient()
-                        loadUrl("file:///android_asset/terms.html")
+                        // El HTML trae estilos claros y oscuros. Se le pone
+                        // data-theme para que siga el ajuste de la app y no
+                        // el del telefono.
+                        val tema = if (Palette.isDark) "dark" else "light"
+                        val html = context.assets.open("terms.html")
+                            .bufferedReader().use { it.readText() }
+                            .replaceFirst("<html", "<html data-theme=\"$tema\"")
+                        loadDataWithBaseURL(
+                            "file:///android_asset/", html, "text/html", "utf-8", null
+                        )
                     }
                 }
             )

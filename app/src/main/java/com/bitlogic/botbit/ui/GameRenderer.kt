@@ -3,6 +3,7 @@ package com.bitlogic.botbit.ui
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -115,9 +116,9 @@ fun DrawScope.drawWorld(
 
                     scale(spin, 1f, pivot = Offset(cx, cy)) {
                         drawCircle(Palette.Yellow, r, Offset(cx, cy))
-                        drawCircle(Palette.Ink, r, Offset(cx, cy), style = Stroke(stroke * 0.9f))
-                        drawCircle(Palette.Surface, r * 0.30f, Offset(cx, cy))
-                        drawCircle(Palette.Ink, r * 0.30f, Offset(cx, cy), style = Stroke(stroke * 0.6f))
+                        drawCircle(Palette.Light.Ink, r, Offset(cx, cy), style = Stroke(stroke * 0.9f))
+                        drawCircle(Palette.Light.Surface, r * 0.30f, Offset(cx, cy))
+                        drawCircle(Palette.Light.Ink, r * 0.30f, Offset(cx, cy), style = Stroke(stroke * 0.6f))
                     }
                 }
             }
@@ -193,89 +194,135 @@ fun DrawScope.drawWorld(
 }
 
 /**
- * Dibuja el modo torre. La camara se centra en la sala actual.
+ * Dibuja el modo torre.
+ *
+ * La sala completa (12 x 15 tiles) SIEMPRE cabe en pantalla: el tamano del tile
+ * se elige con el lado que limite (ancho o alto) y la torre se centra. Antes el
+ * tile salia solo del ancho, asi que en telefonos altos sobraba cielo arriba, en
+ * horizontal la sala se salia por arriba y en tablet (16 tiles) quedaba pegada
+ * a la izquierda con un hueco a la derecha.
+ *
+ * El espacio sobrante a los lados se pinta como muro exterior, y arriba/abajo se
+ * ve lo que asoma de la sala vecina, asi que ya no hay franjas vacias.
+ *
+ * @param bottomInsetPx alto reservado abajo para los botones de carga, para que
+ *   no tapen el piso de la sala.
  */
 fun DrawScope.drawTowerWorld(
     world: TowerWorld,
-    tilesVisibleX: Float = 12f,
     theme: LevelTheme = LevelTheme.DEFAULT,
-    scratch: RenderScratch
+    scratch: RenderScratch,
+    bottomInsetPx: Float = 0f
 ) {
-    val tile = size.width / tilesVisibleX
+    val towerWidthTiles = 12f
     val roomHeightTiles = 15f
+
+    // ---- Escala: la sala entera cabe en el area libre ----
+    val usableH = (size.height - bottomInsetPx).coerceAtLeast(1f)
+    val tile = minOf(size.width / towerWidthTiles, usableH / roomHeightTiles)
+
+    val towerPxW = towerWidthTiles * tile
+    val roomPxH = roomHeightTiles * tile
+    val offX = (size.width - towerPxW) / 2f
+    /** Coordenada Y en pantalla del piso de la sala actual (sala centrada). */
+    val baseY = (usableH + roomPxH) / 2f
+
     val roomBottomY = world.room * roomHeightTiles
-    val groundY = size.height 
     val stroke = tile * 0.075f
     val t = world.elapsed
 
-    fun sx(worldX: Float): Float = worldX * tile
-    fun sy(worldY: Float): Float = size.height - (worldY - roomBottomY) * tile
+    fun sx(worldX: Float): Float = offX + worldX * tile
+    fun sy(worldY: Float): Float = baseY - (worldY - roomBottomY) * tile
 
-    // ---- Fondo estatico con el color del cielo del tema ----
-    drawRect(theme.skyTop, Offset.Zero, size)
+    // Rango del mundo que realmente se ve (incluye lo que asoma arriba y abajo)
+    val visibleBottom = roomBottomY - (size.height - baseY) / tile
+    val visibleTop = roomBottomY + baseY / tile
 
-    // ---- Plataformas y bloques ----
-    world.obstacles.forEach { ob ->
-        // Solo dibujar si esta cerca de la sala actual
-        if (ob.y + ob.h < roomBottomY - 2f || ob.y > roomBottomY + roomHeightTiles + 2f) return@forEach
+    // ---- Exterior de la torre: cubre toda la pantalla ----
+    drawRect(theme.groundDeep, Offset.Zero, size)
 
-        when (ob.type) {
-            ObstacleType.BLOCK, ObstacleType.RECTANGLE -> {
-                val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
-                val boxSize = Size(ob.w * tile, ob.h * tile)
-                val radius = CornerRadius(tile * 0.12f, tile * 0.12f)
-                drawRoundRect(theme.blockFill, topLeft, boxSize, radius)
-                drawRoundRect(theme.obstacleEdge, topLeft, boxSize, radius, style = Stroke(stroke))
+    // ---- Interior: cielo del tema en todo el alto de la columna ----
+    drawRect(
+        brush = Brush.verticalGradient(listOf(theme.skyTop, theme.skyBottom)),
+        topLeft = Offset(offX, 0f),
+        size = Size(towerPxW, size.height)
+    )
+
+    clipRect(left = offX, top = 0f, right = offX + towerPxW, bottom = size.height) {
+
+        // ---- Plataformas y bloques ----
+        world.obstacles.forEach { ob ->
+            if (ob.y + ob.h < visibleBottom - 1f || ob.y > visibleTop + 1f) return@forEach
+
+            when (ob.type) {
+                ObstacleType.BLOCK, ObstacleType.RECTANGLE -> {
+                    val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
+                    val boxSize = Size(ob.w * tile, ob.h * tile)
+                    val radius = CornerRadius(tile * 0.12f, tile * 0.12f)
+                    drawRoundRect(theme.blockFill, topLeft, boxSize, radius)
+                    drawRoundRect(theme.obstacleEdge, topLeft, boxSize, radius, style = Stroke(stroke))
+                }
+                ObstacleType.PLATFORM -> {
+                    val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
+                    val boxSize = Size(ob.w * tile, ob.h * tile)
+                    drawRect(theme.blockFill, topLeft, boxSize)
+                    drawRect(theme.obstacleEdge, topLeft, Size(boxSize.width, stroke * 1.4f))
+                    drawRect(theme.obstacleEdge, topLeft, boxSize, style = Stroke(stroke * 0.7f))
+                }
+                ObstacleType.CHECKPOINT -> {
+                    val cx = sx(ob.x + ob.w / 2f)
+                    val cy = sy(ob.y + ob.h / 2f)
+                    val r = ob.w * tile / 2f
+                    drawCircle(Palette.Purple.copy(alpha = 0.3f), r * 1.5f, Offset(cx, cy))
+                    drawCircle(Palette.Purple, r, Offset(cx, cy))
+                    drawCircle(Palette.Light.Ink, r, Offset(cx, cy), style = Stroke(stroke))
+                }
+                else -> {}
             }
-            ObstacleType.PLATFORM -> {
-                val topLeft = Offset(sx(ob.x), sy(ob.y + ob.h))
-                val boxSize = Size(ob.w * tile, ob.h * tile)
-                drawRect(theme.blockFill, topLeft, boxSize)
-                drawRect(theme.obstacleEdge, topLeft, Size(boxSize.width, stroke * 1.4f))
-                drawRect(theme.obstacleEdge, topLeft, boxSize, style = Stroke(stroke * 0.7f))
-            }
-            ObstacleType.CHECKPOINT -> {
-                val cx = sx(ob.x + ob.w / 2f)
-                val cy = sy(ob.y + ob.h / 2f)
-                val r = ob.w * tile / 2f
-                drawCircle(Palette.Purple.copy(alpha = 0.3f), r * 1.5f, Offset(cx, cy))
-                drawCircle(Palette.Purple, r, Offset(cx, cy))
-                drawCircle(Palette.Ink, r, Offset(cx, cy), style = Stroke(stroke))
-            }
-            else -> {}
+        }
+
+        // ---- Jugador (Robot) ----
+        val s = GameConfig.PLAYER_SIZE * tile
+        val left = sx(world.x)
+        val top = sy(world.y + GameConfig.PLAYER_SIZE)
+        val cx = left + s / 2f
+        val cy = top + s / 2f
+
+        // Barra de carga sobre el robot
+        if (world.charging) {
+            val barW = s * 1.2f
+            val barH = tile * 0.15f
+            val bx = cx - barW / 2f
+            val by = top - tile * 0.4f
+            drawRect(Palette.Light.Ink, Offset(bx, by), Size(barW, barH))
+            drawRect(Palette.Yellow, Offset(bx, by), Size(barW * world.chargeRatio, barH))
+        }
+
+        rotate(degrees = world.rotation, pivot = Offset(cx, cy)) {
+            drawRobot(
+                color = Palette.DarkYellow,
+                onGround = world.onGround,
+                vy = 0f,
+                rotation = world.rotation,
+                left = left,
+                top = top,
+                s = s,
+                stroke = stroke,
+                t = t,
+                theme = theme,
+                scratch = scratch
+            )
         }
     }
 
-    // ---- Jugador (Robot) ----
-    val s = GameConfig.PLAYER_SIZE * tile
-    val left = sx(world.x)
-    val top = sy(world.y + GameConfig.PLAYER_SIZE)
-    val cx = left + s / 2f
-    val cy = top + s / 2f
-
-    // Barra de carga sobre el robot
-    if (world.charging) {
-        val barW = s * 1.2f
-        val barH = tile * 0.15f
-        val bx = cx - barW / 2f
-        val by = top - tile * 0.4f
-        drawRect(Palette.Ink, Offset(bx, by), Size(barW, barH))
-        drawRect(Palette.Yellow, Offset(bx, by), Size(barW * world.chargeRatio, barH))
-    }
-
-    rotate(degrees = world.rotation, pivot = Offset(cx, cy)) {
-        drawRobot(
-            color = Palette.DarkYellow, 
-            onGround = world.onGround,
-            vy = 0f, 
-            rotation = world.rotation,
-            left = left,
-            top = top,
-            s = s,
-            stroke = stroke,
-            t = t,
-            theme = theme,
-            scratch = scratch
+    // ---- Bordes de la torre (solo si sobra espacio a los lados) ----
+    if (offX > 0.5f) {
+        drawLine(theme.groundEdge, Offset(offX, 0f), Offset(offX, size.height), stroke * 2f)
+        drawLine(
+            theme.groundEdge,
+            Offset(offX + towerPxW, 0f),
+            Offset(offX + towerPxW, size.height),
+            stroke * 2f
         )
     }
 }
@@ -329,18 +376,18 @@ fun DrawScope.drawArenaWorld(
         if (ex < -s || ex > size.width + s || ey < -s || ey > size.height + s) return@forEach
         
         drawRect(Palette.Red, Offset(ex - s/2, ey - s/2), Size(s, s))
-        drawRect(Palette.Ink, Offset(ex - s/2, ey - s/2), Size(s, s), style = Stroke(stroke))
+        drawRect(Palette.Light.Ink, Offset(ex - s/2, ey - s/2), Size(s, s), style = Stroke(stroke))
         
         // Ojos de "virus"
-        drawCircle(Palette.Surface, tile * 0.1f, Offset(ex - s * 0.2f, ey - s * 0.1f))
-        drawCircle(Palette.Surface, tile * 0.1f, Offset(ex + s * 0.2f, ey - s * 0.1f))
+        drawCircle(Palette.Light.Surface, tile * 0.1f, Offset(ex - s * 0.2f, ey - s * 0.1f))
+        drawCircle(Palette.Light.Surface, tile * 0.1f, Offset(ex + s * 0.2f, ey - s * 0.1f))
     }
 
     // ---- Balas ----
     world.bullets.forEach { b ->
         if (!b.active) return@forEach
         drawCircle(Palette.Yellow, tile * 0.15f, Offset(sx(b.x), sy(b.y)))
-        drawCircle(Palette.Ink, tile * 0.15f, Offset(sx(b.x), sy(b.y)), style = Stroke(1.5f))
+        drawCircle(Palette.Light.Ink, tile * 0.15f, Offset(sx(b.x), sy(b.y)), style = Stroke(1.5f))
     }
 
     // ---- Jugador (Robot) ----
@@ -403,12 +450,12 @@ private fun DrawScope.drawRobot(
 
     // Antenas con luces que alternan
     val blinkA = sin(t * 5f) > 0f
-    drawRect(Palette.Ink, Offset(left + s * 0.15f, top - s * 0.30f), Size(s * 0.06f, s * 0.30f))
+    drawRect(Palette.Light.Ink, Offset(left + s * 0.15f, top - s * 0.30f), Size(s * 0.06f, s * 0.30f))
     drawCircle(
         if (blinkA) Palette.Red else Palette.Red.copy(alpha = 0.35f),
         s * 0.08f, Offset(left + s * 0.18f, top - s * 0.32f)
     )
-    drawRect(Palette.Ink, Offset(left + s * 0.79f, top - s * 0.30f), Size(s * 0.06f, s * 0.30f))
+    drawRect(Palette.Light.Ink, Offset(left + s * 0.79f, top - s * 0.30f), Size(s * 0.06f, s * 0.30f))
     drawCircle(
         if (!blinkA) Palette.Blue else Palette.Blue.copy(alpha = 0.35f),
         s * 0.08f, Offset(left + s * 0.82f, top - s * 0.32f)
@@ -417,33 +464,33 @@ private fun DrawScope.drawRobot(
     // Cuerpo
     val radius = CornerRadius(s * 0.22f, s * 0.22f)
     drawRoundRect(robotColor, Offset(left, top), Size(s, s), radius)
-    drawRoundRect(Palette.Ink, Offset(left, top), Size(s, s), radius, style = Stroke(stroke * 1.3f))
+    drawRoundRect(Palette.Light.Ink, Offset(left, top), Size(s, s), radius, style = Stroke(stroke * 1.3f))
 
     // Ojos LED con parpadeo cada ~3.4 s
     val blinking = (t % 3.4f) < 0.12f
     if (blinking) {
-        drawRect(Palette.Ink, Offset(left + s * 0.20f, top + s * 0.35f), Size(s * 0.15f, s * 0.035f))
-        drawRect(Palette.Ink, Offset(left + s * 0.65f, top + s * 0.35f), Size(s * 0.15f, s * 0.035f))
+        drawRect(Palette.Light.Ink, Offset(left + s * 0.20f, top + s * 0.35f), Size(s * 0.15f, s * 0.035f))
+        drawRect(Palette.Light.Ink, Offset(left + s * 0.65f, top + s * 0.35f), Size(s * 0.15f, s * 0.035f))
     } else {
-        drawRect(Palette.Surface, Offset(left + s * 0.20f, top + s * 0.30f), Size(s * 0.15f, s * 0.12f))
-        drawRect(Palette.Ink, Offset(left + s * 0.22f, top + s * 0.32f), Size(s * 0.11f, s * 0.08f))
-        drawRect(Palette.Surface, Offset(left + s * 0.65f, top + s * 0.30f), Size(s * 0.15f, s * 0.12f))
-        drawRect(Palette.Ink, Offset(left + s * 0.67f, top + s * 0.32f), Size(s * 0.11f, s * 0.08f))
+        drawRect(Palette.Light.Surface, Offset(left + s * 0.20f, top + s * 0.30f), Size(s * 0.15f, s * 0.12f))
+        drawRect(Palette.Light.Ink, Offset(left + s * 0.22f, top + s * 0.32f), Size(s * 0.11f, s * 0.08f))
+        drawRect(Palette.Light.Surface, Offset(left + s * 0.65f, top + s * 0.30f), Size(s * 0.15f, s * 0.12f))
+        drawRect(Palette.Light.Ink, Offset(left + s * 0.67f, top + s * 0.32f), Size(s * 0.11f, s * 0.08f))
     }
 
     // Boca LED: barras que laten
     val pulse = 0.5f + 0.5f * sin(t * 6f)
-    drawRect(Palette.Surface, Offset(left + s * 0.35f, top + s * 0.60f), Size(s * 0.30f, s * 0.06f))
+    drawRect(Palette.Light.Surface, Offset(left + s * 0.35f, top + s * 0.60f), Size(s * 0.30f, s * 0.06f))
     drawRect(
         theme.groundEdge.copy(alpha = 0.35f + 0.65f * pulse),
         Offset(left + s * 0.36f, top + s * 0.61f), Size(s * 0.28f, s * 0.04f)
     )
 
     // Tornillos
-    drawCircle(Palette.Ink, s * 0.04f, Offset(left + s * 0.10f, top + s * 0.10f))
-    drawCircle(Palette.Ink, s * 0.04f, Offset(left + s * 0.90f, top + s * 0.10f))
-    drawCircle(Palette.Ink, s * 0.04f, Offset(left + s * 0.10f, top + s * 0.90f))
-    drawCircle(Palette.Ink, s * 0.04f, Offset(left + s * 0.90f, top + s * 0.90f))
+    drawCircle(Palette.Light.Ink, s * 0.04f, Offset(left + s * 0.10f, top + s * 0.10f))
+    drawCircle(Palette.Light.Ink, s * 0.04f, Offset(left + s * 0.90f, top + s * 0.10f))
+    drawCircle(Palette.Light.Ink, s * 0.04f, Offset(left + s * 0.10f, top + s * 0.90f))
+    drawCircle(Palette.Light.Ink, s * 0.04f, Offset(left + s * 0.90f, top + s * 0.90f))
 }
 
 /**

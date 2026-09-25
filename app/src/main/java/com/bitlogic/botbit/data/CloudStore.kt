@@ -1,6 +1,7 @@
 package com.bitlogic.botbit.data
 
 import android.util.Log
+import com.bitlogic.botbit.utils.AnalyticsHelper
 import com.bitlogic.botbit.game.GameKind
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -77,6 +78,7 @@ class CloudStore(private val local: ProgressStore) {
                 db.collection(USUARIOS).document(id)
                     .set(datos, SetOptions.merge())
                     .await()
+                Log.d(TAG, "Progreso subido a usuarios/$id")
 
                 // Records por modo, cada uno en su documento
                 for (kind in GameKind.entries) {
@@ -92,7 +94,8 @@ class CloudStore(private val local: ProgressStore) {
                             SetOptions.merge()
                         ).await()
                 }
-            }.onFailure { Log.w(TAG, "No se pudo subir el progreso", it) }
+                lastError = null
+            }.onFailure { reportError("No se pudo subir el progreso", it) }
         }
     }
 
@@ -152,8 +155,9 @@ class CloudStore(private val local: ProgressStore) {
                         local.saveBestScore(kind, nube); hubo = true
                     }
                 }
+                lastError = null
                 hubo
-            }.onFailure { Log.w(TAG, "No se pudo bajar el progreso", it) }
+            }.onFailure { reportError("No se pudo bajar el progreso", it) }
                 .getOrDefault(false)
 
             onDone(cambio)
@@ -169,6 +173,22 @@ class CloudStore(private val local: ProgressStore) {
             push()
             onDone(cambio)
         }
+    }
+
+    /**
+     * Ultimo error de la nube, o null si la ultima operacion salio bien.
+     * Antes los errores solo iban a Log.w y parecia que "no pasaba nada".
+     */
+    @Volatile
+    var lastError: String? = null
+        private set
+
+    private fun reportError(msg: String, e: Throwable) {
+        // Log.e para que salga en rojo en Logcat (filtro: tag:CloudStore)
+        Log.e(TAG, "$msg: ${e.message}", e)
+        lastError = "$msg: ${e.message}"
+        // Tambien a Crashlytics como error no fatal, para verlo en la consola
+        AnalyticsHelper.recordNonFatalError(e, "CloudStore - $msg")
     }
 
     private companion object {

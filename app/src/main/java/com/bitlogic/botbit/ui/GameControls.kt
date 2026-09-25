@@ -120,7 +120,7 @@ private fun ChargeButton(
             text = label,
             fontSize = if (small) 22.sp else 30.sp,
             fontWeight = FontWeight.Black,
-            color = Palette.Black
+            color = if (pressed) Palette.OnAccent else Palette.Black
         )
     }
 }

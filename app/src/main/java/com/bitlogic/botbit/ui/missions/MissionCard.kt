@@ -154,7 +154,7 @@ fun MissionCard(
                         ) {
                             Text(
                                 text = "RECLAMAR +${mission.mission.rewardCoins}",
-                                color = Palette.Black,
+                                color = Palette.OnAccent,
                                 fontWeight = FontWeight.Black,
                                 fontSize = 12.sp
                             )
@@ -169,7 +169,7 @@ fun MissionCard(
                         ) {
                             Text(
                                 text = "COMPLETAR",
-                                color = Palette.Surface,
+                                color = Palette.White,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp
                             )

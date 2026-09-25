@@ -6,6 +6,7 @@ import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.bitlogic.botbit.R
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -49,9 +50,21 @@ class SSORepositoryImpl(
         val response = try {
             credentialManager.getCredential(request = request, context = context)
         } catch (c: GetCredentialCancellationException) {
-            throw Exception("El usuario canceló el inicio de sesión.")
+            throw Exception("Cancelaste el inicio de sesión.")
+        } catch (e: NoCredentialException) {
+            // ESTE catch va ANTES del generico: NoCredentialException hereda de
+            // GetCredentialException, asi que al reves nunca se alcanzaria.
+            //
+            // No es un error de configuracion: significa que el dispositivo no
+            // tiene ninguna cuenta de Google. Pasa casi siempre en emuladores
+            // sin Play Store. El mensaje generico "No credentials available"
+            // hacia pensar que el problema era del codigo.
+            throw Exception(
+                "No hay cuentas de Google en este dispositivo.\n\n" +
+                "Agrega una en Ajustes → Cuentas, o entra sin cuenta."
+            )
         } catch (e: GetCredentialException) {
-            throw Exception("Fallo en Credential Manager: ${e.message}")
+            throw Exception("No se pudo abrir el selector de cuentas: ${e.message}")
         }
 
         val credential = response.credential

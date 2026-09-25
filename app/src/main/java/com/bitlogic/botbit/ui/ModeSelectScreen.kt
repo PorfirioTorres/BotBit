@@ -220,7 +220,7 @@ private fun ModeButton(
             text = label,
             fontSize = if (compact) 13.sp else 15.sp,
             fontWeight = FontWeight.Black,
-            color = Palette.Black,
+            color = if (primary) Palette.OnAccent else Palette.Black,
             letterSpacing = 1.sp
         )
     }

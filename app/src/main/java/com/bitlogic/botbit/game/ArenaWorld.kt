@@ -186,6 +186,13 @@ class ArenaWorld(
     }
 
     override fun retry() {
+        // El reloj, la dificultad y la meta de XP tambien vuelven a cero;
+        // antes el reintento empezaba con el tiempo del intento anterior.
+        elapsed = 0f
+        spawnTimer = 0f
+        shootTimer = 0f
+        xpToNextLevel = 100
+        attempts++
         hearts = MAX_HEARTS
         invulnerable = 0f
         px = 0f; py = 0f; vx = 0f; vy = 0f

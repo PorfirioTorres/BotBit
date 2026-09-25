@@ -216,7 +216,7 @@ private fun SelectButton(isCompact: Boolean, onClick: () -> Unit) {
             text = "SELECCIONAR",
             fontSize = if (isCompact) 15.sp else 18.sp,
             fontWeight = FontWeight.Black,
-            color = Palette.Black
+            color = Palette.OnAccent
         )
     }
 }
@@ -348,7 +348,7 @@ fun SlotCard(
                         text = "${character.price}",
                         fontSize = if (isTablet) 12.sp else 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (canAfford) Palette.Black else Palette.Muted
+                        color = if (canAfford) Palette.OnAccent else Palette.Muted
                     )
                 }
             }
@@ -503,7 +503,7 @@ fun PokeButton(
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = if (primary) Palette.Yellow else Palette.Surface,
-            contentColor = Palette.Ink
+            contentColor = if (primary) Palette.OnAccent else Palette.Ink
         ),
         border = if (!primary) BorderStroke(2.dp, Palette.Ink) else null,
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)

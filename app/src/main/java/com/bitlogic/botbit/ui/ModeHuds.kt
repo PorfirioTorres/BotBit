@@ -29,7 +29,13 @@ import com.bitlogic.botbit.game.TowerWorld
  * porcentaje de recorrido.
  */
 @Composable
-fun TowerHud(world: TowerWorld, paused: Boolean, onTogglePause: () -> Unit) {
+fun TowerHud(world: TowerWorld, tick: Int, paused: Boolean, onTogglePause: () -> Unit) {
+    // Los datos del mundo no son estado de Compose. Leerlos junto con `tick`
+    // (que si cambia) hace que el HUD se vuelva a pintar con los valores nuevos.
+    val sala = world.room + 1
+    val altura = world.altura.toInt()
+    val record = world.record.toInt()
+
     Row(
         Modifier
             .fillMaxWidth()
@@ -40,12 +46,12 @@ fun TowerHud(world: TowerWorld, paused: Boolean, onTogglePause: () -> Unit) {
     ) {
         Column {
             Text(
-                "SALA ${world.room + 1}",
+                "SALA $sala",
                 fontSize = 10.sp, fontWeight = FontWeight.Black,
                 color = Palette.Muted, letterSpacing = 1.sp
             )
             Text(
-                "${world.altura.toInt()} m",
+                "$altura m",
                 fontSize = 22.sp, fontWeight = FontWeight.Black, color = Palette.Black
             )
         }
@@ -57,7 +63,7 @@ fun TowerHud(world: TowerWorld, paused: Boolean, onTogglePause: () -> Unit) {
                 color = Palette.Muted, letterSpacing = 1.sp
             )
             Text(
-                "${world.record.toInt()} m",
+                "$record m",
                 fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.Blue
             )
         }
@@ -73,7 +79,16 @@ fun TowerHud(world: TowerWorld, paused: Boolean, onTogglePause: () -> Unit) {
  * puntuacion real del genero: no importa cuantos mates, importa cuanto duras.
  */
 @Composable
-fun ArenaHud(world: ArenaWorld, paused: Boolean, onTogglePause: () -> Unit) {
+fun ArenaHud(world: ArenaWorld, tick: Int, paused: Boolean, onTogglePause: () -> Unit) {
+    // POR QUE EL RELOJ NO AVANZABA:
+    // world.elapsed, hearts y progress son variables normales, no estado de
+    // Compose. El HUD solo se volvia a dibujar al pausar, asi que el tiempo se
+    // quedaba en 0:00. Ahora GameScreen manda `tick`, que cambia cada 4 frames,
+    // y los valores se copian aqui para que los Canvas tambien se redibujen.
+    val tiempo = world.elapsed
+    val corazones = world.hearts
+    val progreso = world.progress
+
     Column(
         Modifier
             .fillMaxWidth()
@@ -84,10 +99,10 @@ fun ArenaHud(world: ArenaWorld, paused: Boolean, onTogglePause: () -> Unit) {
         Canvas(Modifier.fillMaxWidth().height(8.dp)) {
             val r = CornerRadius(size.height / 2f, size.height / 2f)
             drawRoundRect(Palette.Track, Offset.Zero, size, r)
-            if (world.progress > 0f) {
+            if (progreso > 0f) {
                 drawRoundRect(
                     Palette.Blue, Offset.Zero,
-                    Size(size.width * world.progress, size.height), r
+                    Size(size.width * progreso, size.height), r
                 )
             }
         }
@@ -105,7 +120,7 @@ fun ArenaHud(world: ArenaWorld, paused: Boolean, onTogglePause: () -> Unit) {
                     Canvas(Modifier.size(18.dp)) {
                         val c = Offset(size.width / 2f, size.height / 2f)
                         val r = size.minDimension / 2.4f
-                        val lleno = i < world.hearts
+                        val lleno = i < corazones
                         drawCircle(if (lleno) Palette.Red else Palette.Track, r, c)
                         drawCircle(Palette.Black, r, c, style = Stroke(2f))
                     }
@@ -120,7 +135,7 @@ fun ArenaHud(world: ArenaWorld, paused: Boolean, onTogglePause: () -> Unit) {
                     color = Palette.Muted, letterSpacing = 1.sp
                 )
                 Text(
-                    formatoTiempo(world.elapsed),
+                    formatoTiempo(tiempo),
                     fontSize = 18.sp, fontWeight = FontWeight.Black, color = Palette.Black
                 )
             }
